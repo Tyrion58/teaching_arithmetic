@@ -1,0 +1,749 @@
+wandb: Currently logged in as: 947775182 (tunyu279). Use `wandb login --relogin` to force relogin
+wandb: - Waiting for wandb.init()...wandb: \ Waiting for wandb.init()...wandb: Tracking run with wandb version 0.16.1
+wandb: Run data is saved locally in /root/autodl-tmp/mygpt/wandb/run-20231225_220100-nc8ybkdx
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run addition-bal
+wandb: ⭐️ View project at https://wandb.ai/tunyu279/addition
+wandb: 🚀 View run at https://wandb.ai/tunyu279/addition/runs/nc8ybkdx
+Overriding config with config/babygpt/train_addition_bal.py:
+# train a miniature character-level shakespeare model
+# good for debugging and playing on macbooks and such
+
+out_dir = 'out/out-addition-bal'
+eval_interval = 250 # keep frequent because we'll overfit
+eval_iters = 200
+log_interval = 10 # don't print too too often
+
+# we expect to overfit on this small dataset, so only save when val improves
+always_save_checkpoint = False
+
+wandb_log = True # override via command line if you like
+wandb_project = 'addition'
+wandb_run_name = 'addition-bal'
+
+dataset = 'addition_bal'
+batch_size = 256
+block_size = 256 # context of up to 256 previous characters
+train_data_path = 'train.bin'
+val_data_path = 'val.bin'
+ckpt_path_name = 'ckpt.pt'
+eval_addition = True
+start = "FILE:data/addition_bal/prompt_addition_test_10000.txt"
+
+# baby GPT model :)
+n_layer = 6
+n_head = 6
+n_embd = 384
+dropout = 0.2
+
+learning_rate = 1e-3 # with baby networks can afford to go a bit higher
+max_iters = 5000
+lr_decay_iters = 5000 # make equal to max_iters usually
+beta2 = 0.99 # make a bit bigger because number of tokens per iter is small
+
+warmup_iters = 100 # not super necessary potentially
+
+device='cuda:0'
+
+# on macbook also add
+# device = 'cpu'  # run on cpu only
+# compile = False # do not torch compile the model
+
+tokens per iteration will be: 2,621,440
+found vocab_size = 13 (inside data/addition_bal/meta.pkl)
+Initializing a new model from scratch
+number of parameters: 10.63M
+num decayed parameter tensors: 26, with 10,720,128 parameters
+num non-decayed parameter tensors: 13, with 4,992 parameters
+using fused AdamW: True
+compiling the model... (takes a ~minute)
+Loading meta from data/addition_bal/meta.pkl...
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 31%|███       | 3091/10000 [00:00<00:00, 30905.90it/s] 62%|██████▏   | 6182/10000 [00:00<00:00, 29929.28it/s] 92%|█████████▏| 9178/10000 [00:00<00:00, 29117.43it/s]100%|██████████| 10000/10000 [00:00<00:00, 29388.77it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  1%|▏         | 1/80 [00:00<00:12,  6.12it/s] 10%|█         | 8/80 [00:00<00:02, 35.08it/s] 19%|█▉        | 15/80 [00:00<00:01, 48.24it/s] 29%|██▉       | 23/80 [00:00<00:00, 57.60it/s] 39%|███▉      | 31/80 [00:00<00:00, 62.93it/s] 49%|████▉     | 39/80 [00:00<00:00, 66.40it/s] 59%|█████▉    | 47/80 [00:00<00:00, 68.23it/s] 69%|██████▉   | 55/80 [00:00<00:00, 70.37it/s] 79%|███████▉  | 63/80 [00:01<00:00, 71.42it/s] 89%|████████▉ | 71/80 [00:01<00:00, 70.78it/s] 99%|█████████▉| 79/80 [00:01<00:00, 70.97it/s]100%|██████████| 80/80 [00:01<00:00, 62.32it/s]
+[2023-12-25 22:01:27,078] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:27,429] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:27,970] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:28,265] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:28,695] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:28,996] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:29,438] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:29,732] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:30,202] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:30,619] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:31,061] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+[2023-12-25 22:01:31,352] torch._inductor.utils: [WARNING] using triton random, expect difference from eager
+accuracy of 10000 examples: 0/10000 (0.0%)
+{'carry0': 0.0, 'carry1': 0.0, 'carry2': 0.0, 'carry3': 0.0}
+step 0: train loss 2.7090, val loss 2.6756
+iter 0: loss 2.7024, time 28260.53ms, mfu -100.00%
+iter 10: loss 2.4384, time 2941.47ms, mfu 20.23%
+iter 20: loss 2.4078, time 3111.29ms, mfu 20.12%
+iter 30: loss 2.3987, time 3190.52ms, mfu 19.98%
+iter 40: loss 2.4082, time 3206.31ms, mfu 19.84%
+iter 50: loss 2.3784, time 3214.55ms, mfu 19.70%
+iter 60: loss 2.4454, time 3197.85ms, mfu 19.59%
+iter 70: loss 2.3011, time 3269.77ms, mfu 19.46%
+iter 80: loss 2.1990, time 3208.90ms, mfu 19.36%
+iter 90: loss 2.1278, time 3189.90ms, mfu 19.29%
+iter 100: loss 2.0926, time 3182.18ms, mfu 19.24%
+iter 110: loss 1.9619, time 3198.98ms, mfu 19.17%
+iter 120: loss 1.8582, time 3201.04ms, mfu 19.11%
+iter 130: loss 1.8371, time 3203.00ms, mfu 19.06%
+iter 140: loss 1.7985, time 3188.61ms, mfu 19.02%
+iter 150: loss 1.7698, time 3199.62ms, mfu 18.98%
+iter 160: loss 1.7747, time 3184.18ms, mfu 18.95%
+iter 170: loss 1.7446, time 3202.64ms, mfu 18.91%
+iter 180: loss 1.7346, time 3187.87ms, mfu 18.89%
+iter 190: loss 1.7341, time 3163.73ms, mfu 18.88%
+iter 200: loss 1.7204, time 3177.46ms, mfu 18.87%
+iter 210: loss 1.7221, time 3061.95ms, mfu 18.92%
+iter 220: loss 1.7203, time 3151.06ms, mfu 18.92%
+iter 230: loss 1.7293, time 3162.68ms, mfu 18.91%
+iter 240: loss 1.7102, time 3197.32ms, mfu 18.88%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 30%|███       | 3050/10000 [00:00<00:00, 30498.65it/s] 61%|██████    | 6100/10000 [00:00<00:00, 29944.58it/s] 94%|█████████▍| 9402/10000 [00:00<00:00, 31331.57it/s]100%|██████████| 10000/10000 [00:00<00:00, 30745.57it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:01, 70.35it/s] 20%|██        | 16/80 [00:00<00:00, 70.34it/s] 30%|███       | 24/80 [00:00<00:00, 71.95it/s] 40%|████      | 32/80 [00:00<00:00, 72.43it/s] 50%|█████     | 40/80 [00:00<00:00, 73.24it/s] 60%|██████    | 48/80 [00:00<00:00, 73.07it/s] 70%|███████   | 56/80 [00:00<00:00, 73.15it/s] 80%|████████  | 64/80 [00:00<00:00, 73.75it/s] 90%|█████████ | 72/80 [00:00<00:00, 72.71it/s]100%|██████████| 80/80 [00:01<00:00, 70.63it/s]100%|██████████| 80/80 [00:01<00:00, 71.93it/s]
+accuracy of 10000 examples: 10/10000 (0.1%)
+{'carry0': 0.06053268765133172, 'carry1': 0.027487630566245192, 'carry2': 0.14814814814814814, 'carry3': 0.22471910112359553}
+step 250: train loss 1.6994, val loss 1.6264
+saving checkpoint to out/out-addition-bal
+saving checkpoint to out/out-addition-bal/ckpt.pt
+iter 250: loss 1.7156, time 19884.50ms, mfu 17.29%
+iter 260: loss 1.7138, time 3189.90ms, mfu 17.43%
+iter 270: loss 1.7059, time 3190.45ms, mfu 17.55%
+iter 280: loss 1.7077, time 3146.57ms, mfu 17.69%
+iter 290: loss 1.7092, time 3246.36ms, mfu 17.75%
+iter 300: loss 1.6985, time 3157.85ms, mfu 17.86%
+iter 310: loss 1.7016, time 3180.86ms, mfu 17.95%
+iter 320: loss 1.6915, time 3182.46ms, mfu 18.02%
+iter 330: loss 1.6917, time 3160.28ms, mfu 18.10%
+iter 340: loss 1.6874, time 3202.05ms, mfu 18.15%
+iter 350: loss 1.7023, time 3192.61ms, mfu 18.20%
+iter 360: loss 1.7018, time 3167.31ms, mfu 18.26%
+iter 370: loss 1.7141, time 3192.42ms, mfu 18.30%
+iter 380: loss 1.6895, time 3201.75ms, mfu 18.33%
+iter 390: loss 1.7244, time 3201.65ms, mfu 18.35%
+iter 400: loss 1.7153, time 3124.68ms, mfu 18.42%
+iter 410: loss 1.6797, time 3151.58ms, mfu 18.47%
+iter 420: loss 1.6692, time 3154.60ms, mfu 18.51%
+iter 430: loss 1.6581, time 3152.51ms, mfu 18.55%
+iter 440: loss 1.6490, time 3053.88ms, mfu 18.64%
+iter 450: loss 1.6255, time 3169.65ms, mfu 18.65%
+iter 460: loss 1.5948, time 3174.20ms, mfu 18.66%
+iter 470: loss 1.5877, time 3152.42ms, mfu 18.69%
+iter 480: loss 1.5296, time 3154.30ms, mfu 18.70%
+iter 490: loss 1.5022, time 3129.72ms, mfu 18.74%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 31%|███       | 3121/10000 [00:00<00:00, 31199.32it/s] 62%|██████▏   | 6241/10000 [00:00<00:00, 30792.94it/s] 93%|█████████▎| 9321/10000 [00:00<00:00, 29413.87it/s]100%|██████████| 10000/10000 [00:00<00:00, 29627.51it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:00, 72.11it/s] 20%|██        | 16/80 [00:00<00:00, 70.39it/s] 30%|███       | 24/80 [00:00<00:00, 70.76it/s] 40%|████      | 32/80 [00:00<00:00, 73.60it/s] 50%|█████     | 40/80 [00:00<00:00, 74.50it/s] 60%|██████    | 48/80 [00:00<00:00, 74.47it/s] 70%|███████   | 56/80 [00:00<00:00, 73.09it/s] 80%|████████  | 64/80 [00:00<00:00, 73.19it/s] 90%|█████████ | 72/80 [00:00<00:00, 72.93it/s]100%|██████████| 80/80 [00:01<00:00, 74.29it/s]100%|██████████| 80/80 [00:01<00:00, 73.39it/s]
+accuracy of 10000 examples: 397/10000 (3.9699999999999998%)
+{'carry0': 8.716707021791766, 'carry1': 3.2435404068169325, 'carry2': 2.577777777777778, 'carry3': 3.5955056179775284}
+step 500: train loss 1.3567, val loss 1.3103
+saving checkpoint to out/out-addition-bal
+saving checkpoint to out/out-addition-bal/ckpt.pt
+iter 500: loss 1.4809, time 16945.84ms, mfu 17.21%
+iter 510: loss 1.4414, time 3136.84ms, mfu 17.39%
+iter 520: loss 1.3928, time 3107.32ms, mfu 17.57%
+iter 530: loss 1.3744, time 3174.08ms, mfu 17.68%
+iter 540: loss 1.3556, time 3212.84ms, mfu 17.77%
+iter 550: loss 1.3426, time 3152.47ms, mfu 17.88%
+iter 560: loss 1.3174, time 3194.56ms, mfu 17.95%
+iter 570: loss 1.3025, time 3127.37ms, mfu 18.06%
+iter 580: loss 1.3005, time 3147.69ms, mfu 18.15%
+iter 590: loss 1.2796, time 3164.05ms, mfu 18.21%
+iter 600: loss 1.2811, time 3180.51ms, mfu 18.26%
+iter 610: loss 1.2611, time 3192.87ms, mfu 18.30%
+iter 620: loss 1.2600, time 3161.24ms, mfu 18.35%
+iter 630: loss 1.2618, time 3186.67ms, mfu 18.39%
+iter 640: loss 1.2374, time 3160.57ms, mfu 18.43%
+iter 650: loss 1.2483, time 3138.79ms, mfu 18.48%
+iter 660: loss 1.2244, time 3188.29ms, mfu 18.50%
+iter 670: loss 1.2212, time 3186.11ms, mfu 18.52%
+iter 680: loss 1.2647, time 3173.93ms, mfu 18.54%
+iter 690: loss 1.2166, time 3172.16ms, mfu 18.57%
+iter 700: loss 1.2067, time 3169.29ms, mfu 18.59%
+iter 710: loss 1.1973, time 3146.06ms, mfu 18.62%
+iter 720: loss 1.1941, time 3139.68ms, mfu 18.65%
+iter 730: loss 1.1765, time 3214.84ms, mfu 18.64%
+iter 740: loss 1.1737, time 3216.31ms, mfu 18.63%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 33%|███▎      | 3258/10000 [00:00<00:00, 32570.17it/s] 67%|██████▋   | 6687/10000 [00:00<00:00, 33578.86it/s]100%|██████████| 10000/10000 [00:00<00:00, 33064.55it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:00, 75.77it/s] 20%|██        | 16/80 [00:00<00:00, 76.86it/s] 30%|███       | 24/80 [00:00<00:00, 74.56it/s] 40%|████      | 32/80 [00:00<00:00, 69.60it/s] 50%|█████     | 40/80 [00:00<00:00, 68.96it/s] 60%|██████    | 48/80 [00:00<00:00, 70.80it/s] 70%|███████   | 56/80 [00:00<00:00, 72.79it/s] 80%|████████  | 64/80 [00:00<00:00, 74.53it/s] 90%|█████████ | 72/80 [00:00<00:00, 74.76it/s]100%|██████████| 80/80 [00:01<00:00, 75.41it/s]100%|██████████| 80/80 [00:01<00:00, 73.57it/s]
+accuracy of 10000 examples: 7021/10000 (70.21%)
+{'carry0': 61.92493946731234, 'carry1': 66.41011544804837, 'carry2': 72.88888888888889, 'carry3': 84.04494382022472}
+step 750: train loss 1.0983, val loss 1.1105
+saving checkpoint to out/out-addition-bal
+saving checkpoint to out/out-addition-bal/ckpt.pt
+iter 750: loss 1.1844, time 17021.41ms, mfu 17.11%
+iter 760: loss 1.1751, time 3157.34ms, mfu 17.29%
+iter 770: loss 1.1494, time 3246.91ms, mfu 17.39%
+iter 780: loss 1.1325, time 3192.52ms, mfu 17.52%
+iter 790: loss 1.1156, time 3183.35ms, mfu 17.63%
+iter 800: loss 1.1974, time 3204.63ms, mfu 17.73%
+iter 810: loss 1.1317, time 3152.58ms, mfu 17.84%
+iter 820: loss 1.0976, time 3147.84ms, mfu 17.95%
+iter 830: loss 1.1072, time 3126.62ms, mfu 18.06%
+iter 840: loss 1.0815, time 3234.17ms, mfu 18.09%
+iter 850: loss 1.0628, time 3136.77ms, mfu 18.18%
+iter 860: loss 1.0092, time 3137.40ms, mfu 18.26%
+iter 870: loss 1.0552, time 2984.13ms, mfu 18.43%
+iter 880: loss 0.9888, time 3156.37ms, mfu 18.47%
+iter 890: loss 0.9347, time 3177.71ms, mfu 18.50%
+iter 900: loss 0.9203, time 3168.43ms, mfu 18.53%
+iter 910: loss 0.8411, time 3267.01ms, mfu 18.50%
+iter 920: loss 0.8202, time 3177.82ms, mfu 18.52%
+iter 930: loss 0.8020, time 3196.66ms, mfu 18.53%
+iter 940: loss 0.7152, time 3088.92ms, mfu 18.60%
+iter 950: loss 0.6671, time 3167.67ms, mfu 18.62%
+iter 960: loss 0.6133, time 3155.44ms, mfu 18.65%
+iter 970: loss 0.5871, time 3139.43ms, mfu 18.68%
+iter 980: loss 0.5329, time 3122.45ms, mfu 18.72%
+iter 990: loss 0.4803, time 3139.44ms, mfu 18.74%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 30%|██▉       | 2975/10000 [00:00<00:00, 29745.92it/s] 60%|█████▉    | 5950/10000 [00:00<00:00, 29636.49it/s] 89%|████████▉ | 8914/10000 [00:00<00:00, 28911.78it/s]100%|██████████| 10000/10000 [00:00<00:00, 28888.82it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:00, 72.21it/s] 20%|██        | 16/80 [00:00<00:00, 74.60it/s] 30%|███       | 24/80 [00:00<00:00, 75.12it/s] 40%|████      | 32/80 [00:00<00:00, 73.14it/s] 50%|█████     | 40/80 [00:00<00:00, 71.12it/s] 60%|██████    | 48/80 [00:00<00:00, 70.62it/s] 70%|███████   | 56/80 [00:00<00:00, 71.23it/s] 80%|████████  | 64/80 [00:00<00:00, 72.97it/s] 90%|█████████ | 72/80 [00:00<00:00, 72.82it/s]100%|██████████| 80/80 [00:01<00:00, 72.29it/s]100%|██████████| 80/80 [00:01<00:00, 72.39it/s]
+accuracy of 10000 examples: 8631/10000 (86.31%)
+{'carry0': 80.87167070217917, 'carry1': 84.46948873007146, 'carry2': 88.29629629629629, 'carry3': 93.03370786516854}
+step 1000: train loss 0.1441, val loss 2.1604
+saving checkpoint to out/out-addition-bal/ckpt.pt
+iter 1000: loss 0.3916, time 16855.79ms, mfu 17.22%
+iter 1010: loss 0.3793, time 3140.05ms, mfu 17.39%
+iter 1020: loss 0.3480, time 3111.97ms, mfu 17.57%
+iter 1030: loss 0.2814, time 3101.55ms, mfu 17.73%
+iter 1040: loss 0.2470, time 3025.65ms, mfu 17.92%
+iter 1050: loss 0.2390, time 3094.30ms, mfu 18.05%
+iter 1060: loss 0.2524, time 3217.69ms, mfu 18.10%
+iter 1070: loss 0.1983, time 3186.04ms, mfu 18.16%
+iter 1080: loss 0.1752, time 3154.19ms, mfu 18.23%
+iter 1090: loss 0.1610, time 3052.60ms, mfu 18.35%
+iter 1100: loss 0.1511, time 3175.22ms, mfu 18.39%
+iter 1110: loss 0.1406, time 3180.84ms, mfu 18.43%
+iter 1120: loss 0.1339, time 3167.79ms, mfu 18.46%
+iter 1130: loss 0.1275, time 3186.74ms, mfu 18.48%
+iter 1140: loss 0.1258, time 3070.06ms, mfu 18.57%
+iter 1150: loss 0.3088, time 3122.47ms, mfu 18.62%
+iter 1160: loss 0.2029, time 3182.80ms, mfu 18.63%
+iter 1170: loss 0.1464, time 3171.86ms, mfu 18.64%
+iter 1180: loss 0.1214, time 3188.33ms, mfu 18.65%
+iter 1190: loss 0.1103, time 3219.42ms, mfu 18.63%
+iter 1200: loss 0.1044, time 3151.35ms, mfu 18.66%
+iter 1210: loss 0.1013, time 3197.34ms, mfu 18.65%
+iter 1220: loss 0.0983, time 3134.46ms, mfu 18.69%
+iter 1230: loss 0.0911, time 3194.47ms, mfu 18.68%
+iter 1240: loss 0.0936, time 3215.67ms, mfu 18.66%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 33%|███▎      | 3262/10000 [00:00<00:00, 32609.54it/s] 65%|██████▌   | 6523/10000 [00:00<00:00, 31992.92it/s] 97%|█████████▋| 9725/10000 [00:00<00:00, 32004.72it/s]100%|██████████| 10000/10000 [00:00<00:00, 32054.34it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  9%|▉         | 7/80 [00:00<00:01, 68.74it/s] 18%|█▊        | 14/80 [00:00<00:00, 68.72it/s] 28%|██▊       | 22/80 [00:00<00:00, 69.30it/s] 38%|███▊      | 30/80 [00:00<00:00, 70.55it/s] 48%|████▊     | 38/80 [00:00<00:00, 72.62it/s] 57%|█████▊    | 46/80 [00:00<00:00, 73.69it/s] 68%|██████▊   | 54/80 [00:00<00:00, 74.03it/s] 78%|███████▊  | 62/80 [00:00<00:00, 71.39it/s] 88%|████████▊ | 70/80 [00:00<00:00, 71.24it/s] 98%|█████████▊| 78/80 [00:01<00:00, 70.71it/s]100%|██████████| 80/80 [00:01<00:00, 71.57it/s]
+accuracy of 10000 examples: 8745/10000 (87.45%)
+{'carry0': 80.69007263922518, 'carry1': 85.26663001649258, 'carry2': 90.13333333333333, 'carry3': 94.9812734082397}
+step 1250: train loss 0.0604, val loss 3.5626
+saving checkpoint to out/out-addition-bal/ckpt.pt
+iter 1250: loss 0.0898, time 16739.91ms, mfu 17.15%
+iter 1260: loss 0.0875, time 3218.84ms, mfu 17.29%
+iter 1270: loss 0.0871, time 3145.26ms, mfu 17.45%
+iter 1280: loss 0.0837, time 3179.59ms, mfu 17.58%
+iter 1290: loss 0.0823, time 3160.07ms, mfu 17.70%
+iter 1300: loss 0.0809, time 3149.29ms, mfu 17.82%
+iter 1310: loss 0.0778, time 3156.46ms, mfu 17.93%
+iter 1320: loss 0.0788, time 3152.06ms, mfu 18.02%
+iter 1330: loss 0.0777, time 3203.30ms, mfu 18.08%
+iter 1340: loss 0.0759, time 3033.50ms, mfu 18.23%
+iter 1350: loss 0.0734, time 3165.88ms, mfu 18.29%
+iter 1360: loss 0.0728, time 3134.38ms, mfu 18.36%
+iter 1370: loss 0.0730, time 3147.14ms, mfu 18.41%
+iter 1380: loss 0.0709, time 3157.88ms, mfu 18.46%
+iter 1390: loss 0.0718, time 3183.99ms, mfu 18.48%
+iter 1400: loss 0.0695, time 3151.27ms, mfu 18.52%
+iter 1410: loss 0.0685, time 3182.27ms, mfu 18.54%
+iter 1420: loss 0.0696, time 3141.48ms, mfu 18.58%
+iter 1430: loss 1.3556, time 3098.42ms, mfu 18.64%
+iter 1440: loss 0.7234, time 3176.41ms, mfu 18.65%
+iter 1450: loss 0.3167, time 3142.31ms, mfu 18.68%
+iter 1460: loss 0.1411, time 3140.29ms, mfu 18.71%
+iter 1470: loss 0.1003, time 3145.90ms, mfu 18.73%
+iter 1480: loss 0.0850, time 3178.68ms, mfu 18.73%
+iter 1490: loss 0.0760, time 3197.62ms, mfu 18.72%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 27%|██▋       | 2713/10000 [00:00<00:00, 27127.24it/s] 58%|█████▊    | 5816/10000 [00:00<00:00, 29421.67it/s] 89%|████████▉ | 8944/10000 [00:00<00:00, 30269.24it/s]100%|██████████| 10000/10000 [00:00<00:00, 29892.95it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:00, 72.69it/s] 20%|██        | 16/80 [00:00<00:00, 73.93it/s] 30%|███       | 24/80 [00:00<00:00, 72.88it/s] 40%|████      | 32/80 [00:00<00:00, 72.91it/s] 50%|█████     | 40/80 [00:00<00:00, 72.29it/s] 60%|██████    | 48/80 [00:00<00:00, 72.12it/s] 70%|███████   | 56/80 [00:00<00:00, 72.69it/s] 80%|████████  | 64/80 [00:00<00:00, 73.55it/s] 90%|█████████ | 72/80 [00:00<00:00, 73.88it/s]100%|██████████| 80/80 [00:01<00:00, 73.09it/s]100%|██████████| 80/80 [00:01<00:00, 73.00it/s]
+accuracy of 10000 examples: 8669/10000 (86.69%)
+{'carry0': 80.75060532687651, 'carry1': 84.35953820780648, 'carry2': 89.24444444444445, 'carry3': 93.93258426966293}
+step 1500: train loss 0.0533, val loss 3.4065
+iter 1500: loss 0.0754, time 16935.88ms, mfu 17.20%
+iter 1510: loss 0.0729, time 3108.56ms, mfu 17.39%
+iter 1520: loss 0.0711, time 3166.27ms, mfu 17.53%
+iter 1530: loss 0.0688, time 3199.31ms, mfu 17.64%
+iter 1540: loss 0.0665, time 3211.71ms, mfu 17.73%
+iter 1550: loss 0.0672, time 3162.34ms, mfu 17.84%
+iter 1560: loss 0.0667, time 3153.83ms, mfu 17.94%
+iter 1570: loss 0.0645, time 3222.05ms, mfu 17.99%
+iter 1580: loss 0.0647, time 3051.61ms, mfu 18.15%
+iter 1590: loss 0.0629, time 3197.04ms, mfu 18.19%
+iter 1600: loss 0.0619, time 3123.51ms, mfu 18.28%
+iter 1610: loss 0.0618, time 3110.75ms, mfu 18.36%
+iter 1620: loss 0.0621, time 3179.10ms, mfu 18.40%
+iter 1630: loss 0.0614, time 3189.94ms, mfu 18.43%
+iter 1640: loss 0.0600, time 3212.07ms, mfu 18.44%
+iter 1650: loss 0.0598, time 3121.76ms, mfu 18.50%
+iter 1660: loss 0.0585, time 3186.22ms, mfu 18.52%
+iter 1670: loss 0.0570, time 3190.52ms, mfu 18.53%
+iter 1680: loss 0.0586, time 3194.03ms, mfu 18.54%
+iter 1690: loss 0.0584, time 3164.09ms, mfu 18.57%
+iter 1700: loss 0.0576, time 3157.06ms, mfu 18.60%
+iter 1710: loss 0.0574, time 3238.78ms, mfu 18.57%
+iter 1720: loss 0.0558, time 3195.93ms, mfu 18.58%
+iter 1730: loss 0.0562, time 3182.86ms, mfu 18.59%
+iter 1740: loss 0.0563, time 3153.37ms, mfu 18.62%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 29%|██▊       | 2862/10000 [00:00<00:00, 28615.46it/s] 57%|█████▋    | 5724/10000 [00:00<00:00, 28126.44it/s] 87%|████████▋ | 8700/10000 [00:00<00:00, 28864.55it/s]100%|██████████| 10000/10000 [00:00<00:00, 28815.35it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:00, 76.38it/s] 21%|██▏       | 17/80 [00:00<00:00, 79.43it/s] 32%|███▎      | 26/80 [00:00<00:00, 80.86it/s] 44%|████▍     | 35/80 [00:00<00:00, 82.82it/s] 55%|█████▌    | 44/80 [00:00<00:00, 77.74it/s] 65%|██████▌   | 52/80 [00:00<00:00, 75.18it/s] 75%|███████▌  | 60/80 [00:00<00:00, 74.64it/s] 85%|████████▌ | 68/80 [00:00<00:00, 73.81it/s] 95%|█████████▌| 76/80 [00:01<00:00, 73.31it/s]100%|██████████| 80/80 [00:01<00:00, 76.23it/s]
+accuracy of 10000 examples: 8762/10000 (87.62%)
+{'carry0': 81.23486682808718, 'carry1': 85.51401869158879, 'carry2': 90.25185185185185, 'carry3': 94.6067415730337}
+step 1750: train loss 0.0457, val loss 4.0968
+saving checkpoint to out/out-addition-bal/ckpt.pt
+iter 1750: loss 0.0556, time 16414.16ms, mfu 17.12%
+iter 1760: loss 0.0566, time 3183.70ms, mfu 17.28%
+iter 1770: loss 0.0540, time 3090.92ms, mfu 17.48%
+iter 1780: loss 0.0550, time 3167.95ms, mfu 17.61%
+iter 1790: loss 0.0539, time 3189.44ms, mfu 17.71%
+iter 1800: loss 0.0551, time 3155.85ms, mfu 17.83%
+iter 1810: loss 0.0539, time 3181.36ms, mfu 17.92%
+iter 1820: loss 0.0534, time 3127.13ms, mfu 18.03%
+iter 1830: loss 0.0538, time 3176.42ms, mfu 18.10%
+iter 1840: loss 0.0536, time 3209.51ms, mfu 18.14%
+iter 1850: loss 0.0527, time 3162.36ms, mfu 18.21%
+iter 1860: loss 0.0522, time 3183.50ms, mfu 18.26%
+iter 1870: loss 0.0523, time 3147.69ms, mfu 18.32%
+iter 1880: loss 0.0519, time 3153.35ms, mfu 18.38%
+iter 1890: loss 0.0518, time 3135.65ms, mfu 18.44%
+iter 1900: loss 0.0510, time 3129.15ms, mfu 18.50%
+iter 1910: loss 0.0510, time 2990.08ms, mfu 18.64%
+iter 1920: loss 0.0518, time 2977.80ms, mfu 18.77%
+iter 1930: loss 0.0503, time 3170.48ms, mfu 18.77%
+iter 1940: loss 0.0515, time 3152.70ms, mfu 18.78%
+iter 1950: loss 0.0502, time 3171.51ms, mfu 18.78%
+iter 1960: loss 0.0503, time 3108.00ms, mfu 18.82%
+iter 1970: loss 0.0488, time 3141.96ms, mfu 18.83%
+iter 1980: loss 0.0505, time 3192.64ms, mfu 18.81%
+iter 1990: loss 0.0486, time 3218.01ms, mfu 18.78%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 28%|██▊       | 2788/10000 [00:00<00:00, 27877.83it/s] 56%|█████▌    | 5605/10000 [00:00<00:00, 28044.63it/s] 84%|████████▍ | 8410/10000 [00:00<00:00, 17872.18it/s]100%|██████████| 10000/10000 [00:00<00:00, 20095.17it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  8%|▊         | 6/80 [00:00<00:01, 50.99it/s] 15%|█▌        | 12/80 [00:00<00:01, 50.65it/s] 22%|██▎       | 18/80 [00:00<00:01, 51.89it/s] 30%|███       | 24/80 [00:00<00:01, 52.21it/s] 38%|███▊      | 30/80 [00:00<00:00, 52.36it/s] 45%|████▌     | 36/80 [00:00<00:00, 51.95it/s] 52%|█████▎    | 42/80 [00:00<00:00, 52.04it/s] 60%|██████    | 48/80 [00:00<00:00, 52.35it/s] 68%|██████▊   | 54/80 [00:01<00:00, 52.32it/s] 75%|███████▌  | 60/80 [00:01<00:00, 52.49it/s] 82%|████████▎ | 66/80 [00:01<00:00, 52.78it/s] 90%|█████████ | 72/80 [00:01<00:00, 52.55it/s] 98%|█████████▊| 78/80 [00:01<00:00, 52.37it/s]100%|██████████| 80/80 [00:01<00:00, 52.30it/s]
+accuracy of 10000 examples: 8667/10000 (86.67%)
+{'carry0': 80.50847457627118, 'carry1': 84.44200109950522, 'carry2': 88.91851851851852, 'carry3': 94.68164794007491}
+step 2000: train loss 0.0425, val loss 4.4588
+iter 2000: loss 0.0493, time 17458.10ms, mfu 17.24%
+iter 2010: loss 0.0476, time 3160.25ms, mfu 17.40%
+iter 2020: loss 0.0491, time 3175.13ms, mfu 17.54%
+iter 2030: loss 0.0484, time 3178.02ms, mfu 17.66%
+iter 2040: loss 0.0486, time 3164.13ms, mfu 17.77%
+iter 2050: loss 0.0479, time 3160.20ms, mfu 17.88%
+iter 2060: loss 0.0485, time 3161.98ms, mfu 17.97%
+iter 2070: loss 0.0489, time 3268.33ms, mfu 18.00%
+iter 2080: loss 0.0475, time 3165.72ms, mfu 18.08%
+iter 2090: loss 0.0473, time 3166.12ms, mfu 18.15%
+iter 2100: loss 0.0463, time 3190.24ms, mfu 18.20%
+iter 2110: loss 0.0458, time 3175.59ms, mfu 18.25%
+iter 2120: loss 0.0477, time 3069.58ms, mfu 18.37%
+iter 2130: loss 0.0468, time 3199.12ms, mfu 18.39%
+iter 2140: loss 0.0467, time 3235.03ms, mfu 18.39%
+iter 2150: loss 0.0464, time 3168.88ms, mfu 18.43%
+iter 2160: loss 0.0463, time 3138.68ms, mfu 18.48%
+iter 2170: loss 0.0459, time 3187.15ms, mfu 18.50%
+iter 2180: loss 0.0455, time 3123.24ms, mfu 18.56%
+iter 2190: loss 0.0452, time 3166.01ms, mfu 18.58%
+iter 2200: loss 0.0452, time 3103.92ms, mfu 18.64%
+iter 2210: loss 0.0450, time 3253.17ms, mfu 18.61%
+iter 2220: loss 0.0450, time 3144.26ms, mfu 18.64%
+iter 2230: loss 0.0447, time 3139.35ms, mfu 18.67%
+iter 2240: loss 0.0450, time 3149.31ms, mfu 18.69%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 31%|███▏      | 3131/10000 [00:00<00:00, 31304.95it/s] 63%|██████▎   | 6262/10000 [00:00<00:00, 29694.10it/s] 92%|█████████▏| 9238/10000 [00:00<00:00, 19291.54it/s]100%|██████████| 10000/10000 [00:00<00:00, 21944.07it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:01, 69.60it/s] 19%|█▉        | 15/80 [00:00<00:00, 68.97it/s] 29%|██▉       | 23/80 [00:00<00:00, 71.72it/s] 39%|███▉      | 31/80 [00:00<00:00, 69.66it/s] 48%|████▊     | 38/80 [00:00<00:00, 68.67it/s] 57%|█████▊    | 46/80 [00:00<00:00, 70.63it/s] 68%|██████▊   | 54/80 [00:00<00:00, 70.78it/s] 78%|███████▊  | 62/80 [00:00<00:00, 71.75it/s] 88%|████████▊ | 70/80 [00:00<00:00, 72.64it/s] 98%|█████████▊| 78/80 [00:01<00:00, 73.81it/s]100%|██████████| 80/80 [00:01<00:00, 71.82it/s]
+accuracy of 10000 examples: 8547/10000 (85.47%)
+{'carry0': 78.26876513317191, 'carry1': 83.04013194062672, 'carry2': 88.14814814814815, 'carry3': 94.23220973782772}
+step 2250: train loss 0.0398, val loss 4.6762
+iter 2250: loss 0.0445, time 16446.00ms, mfu 17.19%
+iter 2260: loss 0.0447, time 3166.91ms, mfu 17.35%
+iter 2270: loss 0.0442, time 3133.32ms, mfu 17.51%
+iter 2280: loss 0.0447, time 3170.64ms, mfu 17.64%
+iter 2290: loss 0.0444, time 3190.06ms, mfu 17.74%
+iter 2300: loss 0.0438, time 3199.99ms, mfu 17.83%
+iter 2310: loss 0.0434, time 3089.36ms, mfu 17.97%
+iter 2320: loss 0.0437, time 3157.39ms, mfu 18.06%
+iter 2330: loss 0.0437, time 3167.04ms, mfu 18.13%
+iter 2340: loss 0.0430, time 3175.76ms, mfu 18.19%
+iter 2350: loss 0.0440, time 3117.53ms, mfu 18.28%
+iter 2360: loss 0.0431, time 3085.79ms, mfu 18.38%
+iter 2370: loss 0.0431, time 3159.15ms, mfu 18.43%
+iter 2380: loss 0.0435, time 3167.22ms, mfu 18.47%
+iter 2390: loss 0.0436, time 3179.98ms, mfu 18.49%
+iter 2400: loss 0.0433, time 3151.50ms, mfu 18.53%
+iter 2410: loss 0.0435, time 3165.89ms, mfu 18.56%
+iter 2420: loss 0.0429, time 3183.34ms, mfu 18.57%
+iter 2430: loss 0.0435, time 3190.89ms, mfu 18.58%
+iter 2440: loss 0.0422, time 3204.03ms, mfu 18.58%
+iter 2450: loss 0.0428, time 3103.27ms, mfu 18.64%
+iter 2460: loss 0.0429, time 3237.37ms, mfu 18.61%
+iter 2470: loss 0.0425, time 3157.61ms, mfu 18.64%
+iter 2480: loss 0.0419, time 3144.02ms, mfu 18.67%
+iter 2490: loss 0.0423, time 3158.41ms, mfu 18.68%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 31%|███       | 3114/10000 [00:00<00:00, 31133.79it/s] 62%|██████▏   | 6228/10000 [00:00<00:00, 31042.13it/s] 93%|█████████▎| 9333/10000 [00:00<00:00, 28280.29it/s]100%|██████████| 10000/10000 [00:00<00:00, 28805.81it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  8%|▊         | 6/80 [00:00<00:01, 55.65it/s] 16%|█▋        | 13/80 [00:00<00:01, 63.75it/s] 26%|██▋       | 21/80 [00:00<00:00, 67.04it/s] 36%|███▋      | 29/80 [00:00<00:00, 68.44it/s] 45%|████▌     | 36/80 [00:00<00:00, 68.90it/s] 54%|█████▍    | 43/80 [00:00<00:00, 67.53it/s] 62%|██████▎   | 50/80 [00:00<00:00, 66.19it/s] 72%|███████▎  | 58/80 [00:00<00:00, 67.77it/s] 82%|████████▎ | 66/80 [00:00<00:00, 69.25it/s] 92%|█████████▎| 74/80 [00:01<00:00, 69.78it/s]100%|██████████| 80/80 [00:01<00:00, 68.28it/s]
+accuracy of 10000 examples: 8420/10000 (84.2%)
+{'carry0': 78.4503631961259, 'carry1': 80.73117097306212, 'carry2': 87.2, 'carry3': 93.18352059925094}
+step 2500: train loss 0.0381, val loss 4.9319
+iter 2500: loss 0.0414, time 17165.86ms, mfu 17.16%
+iter 2510: loss 0.0416, time 3149.64ms, mfu 17.34%
+iter 2520: loss 0.0412, time 3045.11ms, mfu 17.56%
+iter 2530: loss 0.0417, time 3056.70ms, mfu 17.75%
+iter 2540: loss 0.0421, time 3144.98ms, mfu 17.87%
+iter 2550: loss 0.0428, time 3133.73ms, mfu 17.98%
+iter 2560: loss 0.0408, time 3078.32ms, mfu 18.11%
+iter 2570: loss 0.0421, time 3142.95ms, mfu 18.20%
+iter 2580: loss 0.0414, time 3125.27ms, mfu 18.28%
+iter 2590: loss 0.0426, time 3090.09ms, mfu 18.38%
+iter 2600: loss 0.0415, time 3082.70ms, mfu 18.47%
+iter 2610: loss 0.0415, time 3194.76ms, mfu 18.49%
+iter 2620: loss 0.0416, time 3197.05ms, mfu 18.50%
+iter 2630: loss 0.0404, time 3117.42ms, mfu 18.56%
+iter 2640: loss 0.0414, time 3144.25ms, mfu 18.60%
+iter 2650: loss 0.0406, time 3145.19ms, mfu 18.63%
+iter 2660: loss 0.0409, time 3079.18ms, mfu 18.70%
+iter 2670: loss 0.0402, time 3061.62ms, mfu 18.77%
+iter 2680: loss 0.0408, time 3160.53ms, mfu 18.78%
+iter 2690: loss 0.0415, time 3108.79ms, mfu 18.82%
+iter 2700: loss 0.0413, time 3084.58ms, mfu 18.86%
+iter 2710: loss 0.0417, time 3167.98ms, mfu 18.86%
+iter 2720: loss 0.0404, time 3183.59ms, mfu 18.84%
+iter 2730: loss 0.0407, time 3074.49ms, mfu 18.89%
+iter 2740: loss 0.0406, time 3099.77ms, mfu 18.92%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 31%|███       | 3076/10000 [00:00<00:00, 30756.73it/s] 63%|██████▎   | 6280/10000 [00:00<00:00, 31508.88it/s] 94%|█████████▍| 9431/10000 [00:00<00:00, 31183.32it/s]100%|██████████| 10000/10000 [00:00<00:00, 31212.59it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:01, 71.27it/s] 20%|██        | 16/80 [00:00<00:00, 72.55it/s] 30%|███       | 24/80 [00:00<00:00, 71.85it/s] 40%|████      | 32/80 [00:00<00:00, 73.48it/s] 50%|█████     | 40/80 [00:00<00:00, 74.09it/s] 60%|██████    | 48/80 [00:00<00:00, 75.20it/s] 70%|███████   | 56/80 [00:00<00:00, 74.99it/s] 80%|████████  | 64/80 [00:00<00:00, 75.67it/s] 90%|█████████ | 72/80 [00:00<00:00, 73.74it/s]100%|██████████| 80/80 [00:01<00:00, 72.84it/s]100%|██████████| 80/80 [00:01<00:00, 73.57it/s]
+accuracy of 10000 examples: 8391/10000 (83.91%)
+{'carry0': 77.42130750605327, 'carry1': 80.12644310060473, 'carry2': 87.34814814814816, 'carry3': 93.55805243445693}
+step 2750: train loss 0.0373, val loss 5.1166
+iter 2750: loss 0.0409, time 16487.69ms, mfu 17.39%
+iter 2760: loss 0.0408, time 3052.94ms, mfu 17.60%
+iter 2770: loss 0.0406, time 3000.43ms, mfu 17.83%
+iter 2780: loss 0.0400, time 3084.88ms, mfu 17.97%
+iter 2790: loss 0.0402, time 3173.41ms, mfu 18.05%
+iter 2800: loss 0.0408, time 3126.00ms, mfu 18.15%
+iter 2810: loss 0.0398, time 3100.88ms, mfu 18.25%
+iter 2820: loss 0.0399, time 3261.30ms, mfu 18.25%
+iter 2830: loss 0.0405, time 3076.05ms, mfu 18.36%
+iter 2840: loss 0.0405, time 3115.14ms, mfu 18.44%
+iter 2850: loss 0.0399, time 3159.03ms, mfu 18.48%
+iter 2860: loss 0.0398, time 3177.43ms, mfu 18.50%
+iter 2870: loss 0.0405, time 3125.75ms, mfu 18.56%
+iter 2880: loss 0.0406, time 3139.18ms, mfu 18.60%
+iter 2890: loss 0.0402, time 3243.31ms, mfu 18.57%
+iter 2900: loss 0.0396, time 3086.76ms, mfu 18.64%
+iter 2910: loss 0.0402, time 3143.10ms, mfu 18.67%
+iter 2920: loss 0.0397, time 3162.75ms, mfu 18.69%
+iter 2930: loss 0.0399, time 3076.55ms, mfu 18.75%
+iter 2940: loss 0.0396, time 3126.58ms, mfu 18.78%
+iter 2950: loss 0.0398, time 3145.47ms, mfu 18.80%
+iter 2960: loss 0.0400, time 3160.97ms, mfu 18.80%
+iter 2970: loss 0.0393, time 3115.01ms, mfu 18.83%
+iter 2980: loss 0.0393, time 3193.30ms, mfu 18.81%
+iter 2990: loss 0.0397, time 3187.71ms, mfu 18.80%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 17%|█▋        | 1707/10000 [00:00<00:00, 17061.11it/s] 38%|███▊      | 3846/10000 [00:00<00:00, 19603.76it/s] 62%|██████▏   | 6197/10000 [00:00<00:00, 21383.68it/s] 91%|█████████ | 9079/10000 [00:00<00:00, 16241.13it/s]100%|██████████| 10000/10000 [00:00<00:00, 18030.22it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  9%|▉         | 7/80 [00:00<00:01, 66.67it/s] 18%|█▊        | 14/80 [00:00<00:00, 66.26it/s] 26%|██▋       | 21/80 [00:00<00:00, 63.75it/s] 35%|███▌      | 28/80 [00:00<00:00, 64.92it/s] 44%|████▍     | 35/80 [00:00<00:00, 65.17it/s] 54%|█████▍    | 43/80 [00:00<00:00, 67.79it/s] 64%|██████▍   | 51/80 [00:00<00:00, 69.45it/s] 74%|███████▍  | 59/80 [00:00<00:00, 71.13it/s] 84%|████████▍ | 67/80 [00:00<00:00, 71.41it/s] 94%|█████████▍| 75/80 [00:01<00:00, 71.77it/s]100%|██████████| 80/80 [00:01<00:00, 69.26it/s]
+accuracy of 10000 examples: 8352/10000 (83.52000000000001%)
+{'carry0': 77.11864406779661, 'carry1': 80.62122045079714, 'carry2': 86.28148148148148, 'carry3': 92.35955056179776}
+step 3000: train loss 0.0369, val loss 5.3048
+iter 3000: loss 0.0395, time 17167.54ms, mfu 17.26%
+iter 3010: loss 0.0399, time 3101.86ms, mfu 17.46%
+iter 3020: loss 0.0400, time 3183.55ms, mfu 17.58%
+iter 3030: loss 0.0396, time 3127.40ms, mfu 17.73%
+iter 3040: loss 0.0396, time 3120.57ms, mfu 17.86%
+iter 3050: loss 0.0398, time 3176.42ms, mfu 17.95%
+iter 3060: loss 0.0396, time 3082.58ms, mfu 18.08%
+iter 3070: loss 0.0394, time 3167.69ms, mfu 18.15%
+iter 3080: loss 0.0390, time 3140.64ms, mfu 18.23%
+iter 3090: loss 0.0394, time 3081.17ms, mfu 18.34%
+iter 3100: loss 0.0390, time 3151.05ms, mfu 18.40%
+iter 3110: loss 0.0393, time 2974.96ms, mfu 18.56%
+iter 3120: loss 0.0396, time 3163.42ms, mfu 18.58%
+iter 3130: loss 0.0395, time 3162.81ms, mfu 18.61%
+iter 3140: loss 0.0391, time 3071.70ms, mfu 18.68%
+iter 3150: loss 0.0390, time 3097.23ms, mfu 18.74%
+iter 3160: loss 0.0391, time 3158.19ms, mfu 18.75%
+iter 3170: loss 0.0393, time 3101.19ms, mfu 18.79%
+iter 3180: loss 0.0394, time 3181.58ms, mfu 18.78%
+iter 3190: loss 0.0388, time 3068.34ms, mfu 18.85%
+iter 3200: loss 0.0394, time 3053.74ms, mfu 18.91%
+iter 3210: loss 0.0391, time 3314.97ms, mfu 18.81%
+iter 3220: loss 0.0392, time 3115.83ms, mfu 18.84%
+iter 3230: loss 0.0394, time 3146.78ms, mfu 18.85%
+iter 3240: loss 0.0388, time 3083.87ms, mfu 18.90%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 30%|██▉       | 2974/10000 [00:00<00:00, 29733.72it/s] 59%|█████▉    | 5948/10000 [00:00<00:00, 28478.82it/s] 88%|████████▊ | 8800/10000 [00:00<00:00, 28425.81it/s]100%|██████████| 10000/10000 [00:00<00:00, 28445.04it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:01, 71.10it/s] 20%|██        | 16/80 [00:00<00:00, 73.02it/s] 30%|███       | 24/80 [00:00<00:00, 71.16it/s] 40%|████      | 32/80 [00:00<00:00, 69.76it/s] 49%|████▉     | 39/80 [00:00<00:00, 67.60it/s] 57%|█████▊    | 46/80 [00:00<00:00, 68.14it/s] 68%|██████▊   | 54/80 [00:00<00:00, 69.66it/s] 78%|███████▊  | 62/80 [00:00<00:00, 71.34it/s] 88%|████████▊ | 70/80 [00:00<00:00, 72.54it/s] 98%|█████████▊| 78/80 [00:01<00:00, 71.26it/s]100%|██████████| 80/80 [00:01<00:00, 70.60it/s]
+accuracy of 10000 examples: 8300/10000 (83.0%)
+{'carry0': 76.63438256658596, 'carry1': 80.15393073117097, 'carry2': 85.36296296296297, 'carry3': 92.65917602996254}
+step 3250: train loss 0.0366, val loss 5.3862
+iter 3250: loss 0.0394, time 16632.86ms, mfu 17.36%
+iter 3260: loss 0.0392, time 3111.31ms, mfu 17.54%
+iter 3270: loss 0.0394, time 3149.06ms, mfu 17.68%
+iter 3280: loss 0.0393, time 3149.94ms, mfu 17.80%
+iter 3290: loss 0.0385, time 3043.13ms, mfu 17.97%
+iter 3300: loss 0.0389, time 3186.38ms, mfu 18.04%
+iter 3310: loss 0.0389, time 3159.92ms, mfu 18.12%
+iter 3320: loss 0.0390, time 3062.06ms, mfu 18.26%
+iter 3330: loss 0.0390, time 3130.09ms, mfu 18.33%
+iter 3340: loss 0.0393, time 3109.60ms, mfu 18.41%
+iter 3350: loss 0.0387, time 2995.35ms, mfu 18.56%
+iter 3360: loss 0.0392, time 3093.51ms, mfu 18.63%
+iter 3370: loss 0.0385, time 3106.06ms, mfu 18.68%
+iter 3380: loss 0.0395, time 3124.17ms, mfu 18.72%
+iter 3390: loss 0.0386, time 3025.08ms, mfu 18.81%
+iter 3400: loss 0.0384, time 3191.61ms, mfu 18.80%
+iter 3410: loss 0.0383, time 3091.37ms, mfu 18.84%
+iter 3420: loss 0.0387, time 3111.85ms, mfu 18.87%
+iter 3430: loss 0.0384, time 3162.32ms, mfu 18.87%
+iter 3440: loss 0.0386, time 3054.08ms, mfu 18.93%
+iter 3450: loss 0.0385, time 3182.30ms, mfu 18.91%
+iter 3460: loss 0.0385, time 3154.23ms, mfu 18.90%
+iter 3470: loss 0.0392, time 3104.49ms, mfu 18.93%
+iter 3480: loss 0.0385, time 3166.36ms, mfu 18.92%
+iter 3490: loss 0.0387, time 3112.65ms, mfu 18.94%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 26%|██▌       | 2595/10000 [00:00<00:00, 25944.58it/s] 52%|█████▏    | 5190/10000 [00:00<00:00, 25652.26it/s] 78%|███████▊  | 7811/10000 [00:00<00:00, 25904.85it/s]100%|██████████| 10000/10000 [00:00<00:00, 26589.41it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:01, 68.33it/s] 20%|██        | 16/80 [00:00<00:00, 73.06it/s] 30%|███       | 24/80 [00:00<00:00, 70.48it/s] 40%|████      | 32/80 [00:00<00:00, 71.68it/s] 50%|█████     | 40/80 [00:00<00:00, 73.36it/s] 60%|██████    | 48/80 [00:00<00:00, 70.52it/s] 70%|███████   | 56/80 [00:00<00:00, 70.25it/s] 80%|████████  | 64/80 [00:00<00:00, 71.60it/s] 90%|█████████ | 72/80 [00:01<00:00, 73.13it/s]100%|██████████| 80/80 [00:01<00:00, 72.72it/s]
+accuracy of 10000 examples: 8272/10000 (82.72%)
+{'carry0': 75.84745762711864, 'carry1': 79.76910390324355, 'carry2': 85.3037037037037, 'carry3': 92.73408239700375}
+step 3500: train loss 0.0364, val loss 5.4910
+iter 3500: loss 0.0388, time 17002.21ms, mfu 17.39%
+iter 3510: loss 0.0384, time 3153.47ms, mfu 17.54%
+iter 3520: loss 0.0385, time 3084.01ms, mfu 17.72%
+iter 3530: loss 0.0388, time 3153.27ms, mfu 17.83%
+iter 3540: loss 0.0387, time 3149.15ms, mfu 17.94%
+iter 3550: loss 0.0382, time 3100.56ms, mfu 18.07%
+iter 3560: loss 0.0382, time 3053.09ms, mfu 18.21%
+iter 3570: loss 0.0380, time 3300.06ms, mfu 18.19%
+iter 3580: loss 0.0383, time 3177.20ms, mfu 18.24%
+iter 3590: loss 0.0384, time 3174.47ms, mfu 18.30%
+iter 3600: loss 0.0383, time 3163.22ms, mfu 18.35%
+iter 3610: loss 0.0388, time 3031.79ms, mfu 18.48%
+iter 3620: loss 0.0387, time 3199.09ms, mfu 18.49%
+iter 3630: loss 0.0388, time 3102.24ms, mfu 18.56%
+iter 3640: loss 0.0384, time 3244.27ms, mfu 18.54%
+iter 3650: loss 0.0387, time 3154.29ms, mfu 18.57%
+iter 3660: loss 0.0382, time 3128.68ms, mfu 18.62%
+iter 3670: loss 0.0384, time 3100.65ms, mfu 18.67%
+iter 3680: loss 0.0380, time 3115.52ms, mfu 18.72%
+iter 3690: loss 0.0384, time 3178.77ms, mfu 18.72%
+iter 3700: loss 0.0383, time 3186.54ms, mfu 18.71%
+iter 3710: loss 0.0377, time 3105.18ms, mfu 18.76%
+iter 3720: loss 0.0379, time 3128.56ms, mfu 18.79%
+iter 3730: loss 0.0383, time 3123.22ms, mfu 18.81%
+iter 3740: loss 0.0378, time 3125.85ms, mfu 18.84%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 30%|███       | 3043/10000 [00:00<00:00, 30423.14it/s] 61%|██████    | 6086/10000 [00:00<00:00, 29929.62it/s] 91%|█████████ | 9080/10000 [00:00<00:00, 18463.56it/s]100%|██████████| 10000/10000 [00:00<00:00, 21053.41it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  9%|▉         | 7/80 [00:00<00:01, 64.04it/s] 18%|█▊        | 14/80 [00:00<00:00, 67.27it/s] 26%|██▋       | 21/80 [00:00<00:00, 65.29it/s] 36%|███▋      | 29/80 [00:00<00:00, 68.28it/s] 45%|████▌     | 36/80 [00:00<00:00, 66.47it/s] 55%|█████▌    | 44/80 [00:00<00:00, 68.17it/s] 64%|██████▍   | 51/80 [00:00<00:00, 68.55it/s] 72%|███████▎  | 58/80 [00:00<00:00, 67.78it/s] 82%|████████▎ | 66/80 [00:00<00:00, 68.46it/s] 92%|█████████▎| 74/80 [00:01<00:00, 69.87it/s]100%|██████████| 80/80 [00:01<00:00, 68.21it/s]
+accuracy of 10000 examples: 8291/10000 (82.91%)
+{'carry0': 76.51331719128329, 'carry1': 79.49422759758109, 'carry2': 85.62962962962963, 'carry3': 93.25842696629213}
+step 3750: train loss 0.0363, val loss 5.5534
+iter 3750: loss 0.0378, time 16746.51ms, mfu 17.31%
+iter 3760: loss 0.0387, time 3109.58ms, mfu 17.49%
+iter 3770: loss 0.0380, time 3182.05ms, mfu 17.61%
+iter 3780: loss 0.0378, time 3126.18ms, mfu 17.75%
+iter 3790: loss 0.0379, time 3087.17ms, mfu 17.91%
+iter 3800: loss 0.0376, time 3173.75ms, mfu 17.99%
+iter 3810: loss 0.0382, time 3176.05ms, mfu 18.07%
+iter 3820: loss 0.0386, time 3051.71ms, mfu 18.21%
+iter 3830: loss 0.0384, time 3053.48ms, mfu 18.34%
+iter 3840: loss 0.0381, time 3063.11ms, mfu 18.45%
+iter 3850: loss 0.0379, time 3130.09ms, mfu 18.50%
+iter 3860: loss 0.0383, time 3171.58ms, mfu 18.53%
+iter 3870: loss 0.0381, time 3105.19ms, mfu 18.59%
+iter 3880: loss 0.0379, time 3107.30ms, mfu 18.65%
+iter 3890: loss 0.0376, time 3166.89ms, mfu 18.66%
+iter 3900: loss 0.0384, time 3152.95ms, mfu 18.69%
+iter 3910: loss 0.0377, time 3139.39ms, mfu 18.71%
+iter 3920: loss 0.0377, time 3069.85ms, mfu 18.78%
+iter 3930: loss 0.0375, time 3117.52ms, mfu 18.81%
+iter 3940: loss 0.0377, time 3197.25ms, mfu 18.79%
+iter 3950: loss 0.0378, time 3178.53ms, mfu 18.79%
+iter 3960: loss 0.0379, time 3213.30ms, mfu 18.76%
+iter 3970: loss 0.0378, time 3172.24ms, mfu 18.76%
+iter 3980: loss 0.0376, time 3090.98ms, mfu 18.81%
+iter 3990: loss 0.0376, time 3057.54ms, mfu 18.87%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 30%|███       | 3015/10000 [00:00<00:00, 30143.27it/s] 60%|██████    | 6030/10000 [00:00<00:00, 29843.37it/s] 90%|█████████ | 9015/10000 [00:00<00:00, 29764.32it/s]100%|██████████| 10000/10000 [00:00<00:00, 29379.14it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  9%|▉         | 7/80 [00:00<00:01, 67.68it/s] 18%|█▊        | 14/80 [00:00<00:00, 68.20it/s] 26%|██▋       | 21/80 [00:00<00:00, 68.09it/s] 35%|███▌      | 28/80 [00:00<00:00, 68.30it/s] 45%|████▌     | 36/80 [00:00<00:00, 69.54it/s] 55%|█████▌    | 44/80 [00:00<00:00, 70.18it/s] 65%|██████▌   | 52/80 [00:00<00:00, 68.74it/s] 74%|███████▍  | 59/80 [00:00<00:00, 68.04it/s] 82%|████████▎ | 66/80 [00:00<00:00, 67.97it/s] 91%|█████████▏| 73/80 [00:01<00:00, 67.80it/s]100%|██████████| 80/80 [00:01<00:00, 67.73it/s]100%|██████████| 80/80 [00:01<00:00, 68.26it/s]
+accuracy of 10000 examples: 8278/10000 (82.78%)
+{'carry0': 75.72639225181598, 'carry1': 79.82407916437603, 'carry2': 85.39259259259259, 'carry3': 92.95880149812734}
+step 4000: train loss 0.0361, val loss 5.6442
+iter 4000: loss 0.0382, time 17071.99ms, mfu 17.34%
+iter 4010: loss 0.0378, time 3175.59ms, mfu 17.48%
+iter 4020: loss 0.0378, time 3109.65ms, mfu 17.64%
+iter 4030: loss 0.0372, time 3155.12ms, mfu 17.77%
+iter 4040: loss 0.0375, time 3098.20ms, mfu 17.91%
+iter 4050: loss 0.0375, time 3158.79ms, mfu 18.00%
+iter 4060: loss 0.0381, time 3202.47ms, mfu 18.06%
+iter 4070: loss 0.0373, time 3155.60ms, mfu 18.14%
+iter 4080: loss 0.0376, time 3133.45ms, mfu 18.23%
+iter 4090: loss 0.0378, time 3108.37ms, mfu 18.32%
+iter 4100: loss 0.0374, time 3172.11ms, mfu 18.36%
+iter 4110: loss 0.0375, time 3141.99ms, mfu 18.42%
+iter 4120: loss 0.0374, time 3173.51ms, mfu 18.45%
+iter 4130: loss 0.0375, time 3083.07ms, mfu 18.54%
+iter 4140: loss 0.0379, time 3092.20ms, mfu 18.61%
+iter 4150: loss 0.0382, time 3100.92ms, mfu 18.67%
+iter 4160: loss 0.0375, time 3141.74ms, mfu 18.70%
+iter 4170: loss 0.0378, time 3182.73ms, mfu 18.70%
+iter 4180: loss 0.0375, time 3077.01ms, mfu 18.76%
+iter 4190: loss 0.0375, time 3113.88ms, mfu 18.80%
+iter 4200: loss 0.0376, time 3171.19ms, mfu 18.79%
+iter 4210: loss 0.0376, time 3092.29ms, mfu 18.84%
+iter 4220: loss 0.0378, time 3113.95ms, mfu 18.87%
+iter 4230: loss 0.0379, time 3136.46ms, mfu 18.88%
+iter 4240: loss 0.0374, time 3189.78ms, mfu 18.86%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 27%|██▋       | 2738/10000 [00:00<00:00, 27373.70it/s] 55%|█████▍    | 5476/10000 [00:00<00:00, 22224.38it/s] 84%|████████▍ | 8375/10000 [00:00<00:00, 24964.87it/s]100%|██████████| 10000/10000 [00:00<00:00, 25373.74it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:01, 71.14it/s] 20%|██        | 16/80 [00:00<00:00, 71.91it/s] 30%|███       | 24/80 [00:00<00:00, 67.04it/s] 39%|███▉      | 31/80 [00:00<00:00, 62.65it/s] 48%|████▊     | 38/80 [00:00<00:00, 60.00it/s] 56%|█████▋    | 45/80 [00:00<00:00, 61.00it/s] 65%|██████▌   | 52/80 [00:00<00:00, 63.51it/s] 75%|███████▌  | 60/80 [00:00<00:00, 66.47it/s] 85%|████████▌ | 68/80 [00:01<00:00, 69.10it/s] 95%|█████████▌| 76/80 [00:01<00:00, 70.54it/s]100%|██████████| 80/80 [00:01<00:00, 67.16it/s]
+accuracy of 10000 examples: 8300/10000 (83.0%)
+{'carry0': 76.02905569007264, 'carry1': 80.15393073117097, 'carry2': 85.6888888888889, 'carry3': 92.58426966292134}
+step 4250: train loss 0.0360, val loss 5.7138
+iter 4250: loss 0.0376, time 17251.91ms, mfu 17.32%
+iter 4260: loss 0.0373, time 3107.34ms, mfu 17.50%
+iter 4270: loss 0.0380, time 3126.19ms, mfu 17.65%
+iter 4280: loss 0.0374, time 3113.48ms, mfu 17.80%
+iter 4290: loss 0.0377, time 3162.57ms, mfu 17.90%
+iter 4300: loss 0.0376, time 3149.69ms, mfu 18.00%
+iter 4310: loss 0.0372, time 3138.86ms, mfu 18.10%
+iter 4320: loss 0.0372, time 3197.26ms, mfu 18.15%
+iter 4330: loss 0.0375, time 3201.01ms, mfu 18.19%
+iter 4340: loss 0.0375, time 3083.63ms, mfu 18.30%
+iter 4350: loss 0.0377, time 3049.17ms, mfu 18.43%
+iter 4360: loss 0.0372, time 3146.98ms, mfu 18.47%
+iter 4370: loss 0.0375, time 3143.41ms, mfu 18.52%
+iter 4380: loss 0.0372, time 3098.07ms, mfu 18.59%
+iter 4390: loss 0.0373, time 3287.30ms, mfu 18.54%
+iter 4400: loss 0.0374, time 3079.34ms, mfu 18.62%
+iter 4410: loss 0.0375, time 3189.27ms, mfu 18.62%
+iter 4420: loss 0.0371, time 3191.42ms, mfu 18.63%
+iter 4430: loss 0.0375, time 3068.71ms, mfu 18.70%
+iter 4440: loss 0.0377, time 3196.27ms, mfu 18.70%
+iter 4450: loss 0.0371, time 3160.48ms, mfu 18.71%
+iter 4460: loss 0.0377, time 3218.94ms, mfu 18.69%
+iter 4470: loss 0.0379, time 3056.66ms, mfu 18.77%
+iter 4480: loss 0.0371, time 3123.78ms, mfu 18.79%
+iter 4490: loss 0.0377, time 3108.84ms, mfu 18.83%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 22%|██▏       | 2228/10000 [00:00<00:00, 22276.41it/s] 45%|████▍     | 4456/10000 [00:00<00:00, 22207.90it/s] 67%|██████▋   | 6679/10000 [00:00<00:00, 22213.13it/s] 89%|████████▉ | 8901/10000 [00:00<00:00, 22188.52it/s]100%|██████████| 10000/10000 [00:00<00:00, 16713.86it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  8%|▊         | 6/80 [00:00<00:01, 53.32it/s] 15%|█▌        | 12/80 [00:00<00:01, 53.62it/s] 22%|██▎       | 18/80 [00:00<00:01, 53.49it/s] 30%|███       | 24/80 [00:00<00:01, 53.06it/s] 38%|███▊      | 30/80 [00:00<00:00, 53.04it/s] 45%|████▌     | 36/80 [00:00<00:00, 52.86it/s] 52%|█████▎    | 42/80 [00:00<00:00, 52.56it/s] 60%|██████    | 48/80 [00:00<00:00, 52.86it/s] 68%|██████▊   | 54/80 [00:01<00:00, 52.70it/s] 75%|███████▌  | 60/80 [00:01<00:00, 52.00it/s] 82%|████████▎ | 66/80 [00:01<00:00, 52.48it/s] 90%|█████████ | 72/80 [00:01<00:00, 52.49it/s] 98%|█████████▊| 78/80 [00:01<00:00, 52.52it/s]100%|██████████| 80/80 [00:01<00:00, 52.80it/s]
+accuracy of 10000 examples: 8266/10000 (82.66%)
+{'carry0': 75.84745762711864, 'carry1': 79.19186366135239, 'carry2': 85.48148148148148, 'carry3': 93.40823970037452}
+step 4500: train loss 0.0359, val loss 5.7597
+iter 4500: loss 0.0369, time 18017.87ms, mfu 17.28%
+iter 4510: loss 0.0377, time 3077.81ms, mfu 17.48%
+iter 4520: loss 0.0376, time 3151.19ms, mfu 17.62%
+iter 4530: loss 0.0374, time 3127.90ms, mfu 17.76%
+iter 4540: loss 0.0370, time 3092.51ms, mfu 17.91%
+iter 4550: loss 0.0379, time 3114.52ms, mfu 18.03%
+iter 4560: loss 0.0374, time 3103.51ms, mfu 18.15%
+iter 4570: loss 0.0374, time 3152.63ms, mfu 18.22%
+iter 4580: loss 0.0376, time 3021.87ms, mfu 18.37%
+iter 4590: loss 0.0370, time 3071.08ms, mfu 18.47%
+iter 4600: loss 0.0377, time 3098.31ms, mfu 18.54%
+iter 4610: loss 0.0373, time 3124.95ms, mfu 18.59%
+iter 4620: loss 0.0376, time 3176.95ms, mfu 18.61%
+iter 4630: loss 0.0377, time 3148.31ms, mfu 18.64%
+iter 4640: loss 0.0378, time 3088.47ms, mfu 18.70%
+iter 4650: loss 0.0375, time 3106.02ms, mfu 18.75%
+iter 4660: loss 0.0376, time 3174.18ms, mfu 18.75%
+iter 4670: loss 0.0372, time 3169.43ms, mfu 18.75%
+iter 4680: loss 0.0376, time 3068.67ms, mfu 18.81%
+iter 4690: loss 0.0373, time 3106.73ms, mfu 18.85%
+iter 4700: loss 0.0374, time 3143.11ms, mfu 18.86%
+iter 4710: loss 0.0376, time 3266.39ms, mfu 18.79%
+iter 4720: loss 0.0375, time 3153.89ms, mfu 18.80%
+iter 4730: loss 0.0373, time 3108.13ms, mfu 18.84%
+iter 4740: loss 0.0370, time 3102.43ms, mfu 18.87%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 30%|██▉       | 2983/10000 [00:00<00:00, 29823.70it/s] 60%|█████▉    | 5966/10000 [00:00<00:00, 29254.43it/s] 89%|████████▉ | 8893/10000 [00:00<00:00, 27313.66it/s]100%|██████████| 10000/10000 [00:00<00:00, 28339.57it/s]
+  0%|          | 0/80 [00:00<?, ?it/s] 10%|█         | 8/80 [00:00<00:00, 79.89it/s] 20%|██        | 16/80 [00:00<00:00, 76.73it/s] 30%|███       | 24/80 [00:00<00:00, 78.06it/s] 40%|████      | 32/80 [00:00<00:00, 72.89it/s] 50%|█████     | 40/80 [00:00<00:00, 71.92it/s] 60%|██████    | 48/80 [00:00<00:00, 71.31it/s] 70%|███████   | 56/80 [00:00<00:00, 72.12it/s] 81%|████████▏ | 65/80 [00:00<00:00, 75.03it/s] 92%|█████████▎| 74/80 [00:00<00:00, 76.93it/s]100%|██████████| 80/80 [00:01<00:00, 75.60it/s]
+accuracy of 10000 examples: 8236/10000 (82.36%)
+{'carry0': 75.24213075060533, 'carry1': 78.99945024738868, 'carry2': 85.27407407407406, 'carry3': 92.95880149812734}
+step 4750: train loss 0.0359, val loss 5.7919
+iter 4750: loss 0.0370, time 16891.07ms, mfu 17.34%
+iter 4760: loss 0.0374, time 3114.47ms, mfu 17.51%
+iter 4770: loss 0.0373, time 3111.51ms, mfu 17.68%
+iter 4780: loss 0.0373, time 3130.86ms, mfu 17.81%
+iter 4790: loss 0.0370, time 3101.34ms, mfu 17.95%
+iter 4800: loss 0.0372, time 3082.07ms, mfu 18.08%
+iter 4810: loss 0.0376, time 3110.75ms, mfu 18.19%
+iter 4820: loss 0.0372, time 3078.28ms, mfu 18.30%
+iter 4830: loss 0.0374, time 3123.27ms, mfu 18.38%
+iter 4840: loss 0.0372, time 3114.14ms, mfu 18.45%
+iter 4850: loss 0.0372, time 3168.22ms, mfu 18.49%
+iter 4860: loss 0.0370, time 3170.42ms, mfu 18.51%
+iter 4870: loss 0.0373, time 3164.74ms, mfu 18.54%
+iter 4880: loss 0.0376, time 3140.42ms, mfu 18.58%
+iter 4890: loss 0.0368, time 3096.84ms, mfu 18.65%
+iter 4900: loss 0.0370, time 3147.58ms, mfu 18.67%
+iter 4910: loss 0.0375, time 3196.34ms, mfu 18.67%
+iter 4920: loss 0.0373, time 3031.24ms, mfu 18.77%
+iter 4930: loss 0.0376, time 3029.80ms, mfu 18.85%
+iter 4940: loss 0.0368, time 3141.86ms, mfu 18.86%
+iter 4950: loss 0.0373, time 3063.57ms, mfu 18.92%
+iter 4960: loss 0.0374, time 3135.90ms, mfu 18.93%
+iter 4970: loss 0.0375, time 3143.60ms, mfu 18.93%
+iter 4980: loss 0.0372, time 3146.26ms, mfu 18.93%
+iter 4990: loss 0.0372, time 3128.98ms, mfu 18.93%
+FILE:data/addition_bal/prompt_addition_test_10000.txt
+evaluating addition from: FILE:data/addition_bal/prompt_addition_test_10000.txt
+  0%|          | 0/10000 [00:00<?, ?it/s] 30%|███       | 3013/10000 [00:00<00:00, 30127.37it/s] 60%|██████    | 6026/10000 [00:00<00:00, 29214.11it/s] 90%|████████▉ | 8950/10000 [00:00<00:00, 29184.51it/s]100%|██████████| 10000/10000 [00:00<00:00, 29092.87it/s]
+  0%|          | 0/80 [00:00<?, ?it/s]  9%|▉         | 7/80 [00:00<00:01, 61.91it/s] 19%|█▉        | 15/80 [00:00<00:00, 71.23it/s] 29%|██▉       | 23/80 [00:00<00:00, 75.04it/s] 39%|███▉      | 31/80 [00:00<00:00, 76.95it/s] 49%|████▉     | 39/80 [00:00<00:00, 77.79it/s] 59%|█████▉    | 47/80 [00:00<00:00, 75.69it/s] 69%|██████▉   | 55/80 [00:00<00:00, 70.65it/s] 79%|███████▉  | 63/80 [00:00<00:00, 69.43it/s] 89%|████████▉ | 71/80 [00:00<00:00, 68.11it/s] 99%|█████████▉| 79/80 [00:01<00:00, 69.83it/s]100%|██████████| 80/80 [00:01<00:00, 71.53it/s]
+accuracy of 10000 examples: 8225/10000 (82.25%)
+{'carry0': 75.12106537530266, 'carry1': 78.8345244639912, 'carry2': 85.36296296296297, 'carry3': 92.50936329588015}
+step 5000: train loss 0.0358, val loss 5.8242
+iter 5000: loss 0.0373, time 16843.69ms, mfu 17.39%
+wandb: 
+wandb: Run history:
+wandb:          iter ▁▁▂▂▂▃▃▃▄▄▅▅▅▆▆▆▇▇▇██
+wandb:            lr ▁███▇▇▇▆▆▅▅▄▄▃▃▂▂▂▂▁▁
+wandb:           mfu ▁████████████████████
+wandb: test/accuracy ▁▁▁▇█████████████████
+wandb:    train/loss █▅▄▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:      val/loss ▃▂▁▁▃▅▄▅▆▆▇▇▇▇███████
+wandb: 
+wandb: Run summary:
+wandb:          iter 5000
+wandb:            lr 6e-05
+wandb:           mfu 18.93473
+wandb: test/accuracy 82.25
+wandb:    train/loss 0.03584
+wandb:      val/loss 5.82416
+wandb: 
+wandb: 🚀 View run addition-bal at: https://wandb.ai/tunyu279/addition/runs/nc8ybkdx
+wandb: Synced 6 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20231225_220100-nc8ybkdx/logs
