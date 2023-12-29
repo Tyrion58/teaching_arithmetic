@@ -92,14 +92,14 @@ def is_number(s):
 # making a function to batch evaluate addition
 # NOTE: Teaching arithmetic task is different from others. The condition/prompt is necessary, such like "2+2="
 
-def eval_addition_batch(config, model, ctx, encode, decode, num_digit=3):
+def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_digit=3):
 
     model.eval()
     start = config['start']
     device = config['device']
     
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
-    max_new_tokens = config['max_new_tokens'] if 'max_new_tokens' in config.keys() else num_digit+2
+    max_new_tokens = config['max_new_tokens'] if 'max_new_tokens' in config.keys() else num_digit+4
     
     temperature = config['temperature'] if 'temperature' in config.keys() else 0.8
     top_k = config['top_k'] if 'top_k' in config.keys() else 200
@@ -115,6 +115,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, num_digit=3):
         raise NotImplementedError("This method is not implemented yet!")
     
     correct = 0
+    pred_correct = 0
     #总行数，也是总算式个数
     total = len(lines)
     
@@ -147,8 +148,6 @@ def eval_addition_batch(config, model, ctx, encode, decode, num_digit=3):
         
     # construct batches of prompts now
     batch_list = []
-    list_not_num = []
-    list_outlier_num = []
     for prompt_length in prompt_dict.keys():
         input_tuple_list = prompt_dict[prompt_length]
         for batch_idx in range(math.ceil(len(input_tuple_list)/test_batch_size)):
@@ -169,6 +168,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, num_digit=3):
                 outcome_list = [decode(y_i.tolist()) for y_i in y]
                 # 下面逐个分析这个batch中的model的预测结果
                 for i, outcome in enumerate(outcome_list):
+                    Pred = None
                     # 取出对应的tuple
                     _, len_x, line_start, a, b, c, a_d, b_d, num_carry = batch[i]
                     c_hat = outcome[len_x:]
@@ -178,7 +178,11 @@ def eval_addition_batch(config, model, ctx, encode, decode, num_digit=3):
                         if '\n' == c_hat[-1]: # handle cases where it ends with '\n'
                             c_hat = c_hat[:-1]
                             
-                    c_hat2 = c_hat
+                        if 'T' == c_hat[-1] or 'F' == c_hat[-1]:
+                            Pred = c_hat[-1]
+                            c_hat = c_hat[:-1]
+                            
+                    c_hat2 = c_hat.strip()
                     c_hat2 = c_hat2.split('\n')[0]
                     
                     if is_number(c_hat2):
@@ -193,13 +197,20 @@ def eval_addition_batch(config, model, ctx, encode, decode, num_digit=3):
                         if c == c_hat2:
                             correct+=1
                             carry_dictionary[f'carry{num_carry}_correct']+=1
+                            if Pred == 'T':
+                                pred_correct+=1
+                                
+                        elif Pred == 'F':
+                            pred_correct+=1
                     else:
                         raise NotImplementedError
                     
                     
                     carry_dictionary[f'carry{num_carry}_total']+=1
                     # metric_types = ['mse', 'normalized_mse', 'digit_wise_difference', 'incorrect_digit_count']
-    
+    if judge:
+        pred_accuracy = pred_correct/total*100
+        print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
     accuracy = correct/total*100
     print(f"accuracy of {total} examples: {correct}/{total} ({accuracy}%)")
     accuracy_dictionary = {f'carry{i}': carry_dictionary[f'carry{i}_correct']/carry_dictionary[f'carry{i}_total']*100 \
@@ -207,5 +218,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, num_digit=3):
     print(accuracy_dictionary)
     
     model.train()
+    if judge:
+        return pred_accuracy, accuracy, accuracy_dictionary
     
     return accuracy, accuracy_dictionary

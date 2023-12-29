@@ -78,6 +78,7 @@ tokenizer = 'char'
 # eval_opeartion
 eval_addition = False
 start = None
+judge = False
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str, type(None)))]
 exec(open('configurator.py').read()) # overrides from command line or config file
@@ -282,7 +283,10 @@ while True:
         if eval_addition:
             config['start'] = start
             print(start)
-            test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode)
+            if judge:
+                judgement_accuracy, test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge)
+            else: 
+                test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode)
         
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
         if wandb_log:
@@ -293,6 +297,7 @@ while True:
                 "lr": lr,
                 "mfu": running_mfu*100, # convert to percentage
                 "test/accuracy": test_accuracy if eval_addition else None,
+                "test/judge_accuracy": judgement_accuracy if judge and eval_addition else None, 
             })
         checkpoint = {
                 'model': raw_model.state_dict(),

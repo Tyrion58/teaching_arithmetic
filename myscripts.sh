@@ -7,3 +7,4 @@ nohup python train.py config/babygpt/train_addition_bal.py &
 
 # 训练balanced label addition
 python train.py config/babygpt/train_addition_label.py
+nohup python train.py config/babygpt/train_addition_label.py &

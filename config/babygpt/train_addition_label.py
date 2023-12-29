@@ -20,6 +20,7 @@ train_data_path = 'train.bin'
 val_data_path = 'val.bin'
 ckpt_path_name = 'ckpt.pt'
 eval_addition = True
+judge = True
 start = "FILE:data/addition_label/prompt_addition_label_labeled10000.txt"
 
 # baby GPT model :)
