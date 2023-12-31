@@ -120,7 +120,7 @@ def get_real_c_hat(fake_c_hat, line_start):
     c_hat2 = c_hat2.split('\n')[0]
     
 
-    return fake_c_hat, Pred
+    return c_hat2, Pred
 
 
 def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_digit=3):
@@ -130,7 +130,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_d
     device = config['device']
     
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
-    max_new_tokens = config['max_new_tokens'] if 'max_new_tokens' in config.keys() else num_digit+4
+    max_new_tokens = config['max_new_tokens'] if 'max_new_tokens' in config.keys() else num_digit+2
     
     temperature = config['temperature'] if 'temperature' in config.keys() else 0.8
     top_k = config['top_k'] if 'top_k' in config.keys() else 200
