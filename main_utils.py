@@ -36,7 +36,10 @@ def get_abc(expression: str):
     try:
         # 尝试将表达式中的 'a' 和 'b' 转换为整数
         if expression[0] == 'T' or expression[0] == 'F':
-            expression = expression[2:]
+            if expression[4] == 'T' or expression[4] == 'F':
+                expression = expression[6:]
+            else:
+                expression = expression[2:]
         if '+' in expression:
             operation = '+'
         [a, b] = expression.split(operation)
