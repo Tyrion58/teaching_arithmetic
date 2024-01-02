@@ -21,7 +21,7 @@ val_data_path = 'val.bin'
 ckpt_path_name = 'ckpt.pt'
 eval_addition = True
 judge = True
-start = "FILE:data/addition_labelV4/prompt_3digit_V4_210000.txt"
+start = "FILE:data/addition_labelV4_2/prompt_3digit_V4_210000.txt"
 
 # baby GPT model :)
 n_layer = 6
