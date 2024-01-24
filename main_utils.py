@@ -35,6 +35,11 @@ def get_abc(expression: str):
     """
     try:
         # 尝试将表达式中的 'a' 和 'b' 转换为整数
+        if expression[0] == 'T' or expression[0] == 'F':
+            if expression[4] == 'T' or expression[4] == 'F':
+                expression = expression[6:]
+            else:
+                expression = expression[2:]
         if '+' in expression:
             operation = '+'
         [a, b] = expression.split(operation)
@@ -92,6 +97,35 @@ def is_number(s):
 # making a function to batch evaluate addition
 # NOTE: Teaching arithmetic task is different from others. The condition/prompt is necessary, such like "2+2="
 
+def get_real_c_hat(fake_c_hat, line_start):
+    """
+    This function is used to extract real c_hat from generated string in different inference model
+    """
+    Pred = None
+    if '$' == line_start: # handle $ prompt $
+        c_hat = fake_c_hat.split('$')[0]
+        
+    else:
+        c_hat = fake_c_hat.split('\n')[0]
+    # 来处理\n开头的情况
+    
+    if 'T' == line_start or 'F' == line_start:
+        Pred = line_start
+        
+    if c_hat != '':
+        if 'T' == c_hat[-1] or 'F' == c_hat[-1]:
+            Pred = c_hat[-1]
+            c_hat = c_hat[:-1]
+    else:
+        return c_hat, Pred
+                            
+    c_hat2 = c_hat.strip()
+    c_hat2 = c_hat2.split('\n')[0]
+    
+
+    return c_hat2, Pred
+
+
 def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_digit=3):
 
     model.eval()
@@ -99,7 +133,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_d
     device = config['device']
     
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
-    max_new_tokens = config['max_new_tokens'] if 'max_new_tokens' in config.keys() else num_digit+4
+    max_new_tokens = config['max_new_tokens'] if 'max_new_tokens' in config.keys() else num_digit+2
     
     temperature = config['temperature'] if 'temperature' in config.keys() else 0.8
     top_k = config['top_k'] if 'top_k' in config.keys() else 200
@@ -172,18 +206,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_d
                     # 取出对应的tuple
                     _, len_x, line_start, a, b, c, a_d, b_d, num_carry = batch[i]
                     c_hat = outcome[len_x:]
-                    if '$' == line_start: # handle $ prompt $
-                        c_hat = c_hat.split('$')[0]
-                    else:
-                        if '\n' == c_hat[-1]: # handle cases where it ends with '\n'
-                            c_hat = c_hat[:-1]
-                            
-                        if 'T' == c_hat[-1] or 'F' == c_hat[-1]:
-                            Pred = c_hat[-1]
-                            c_hat = c_hat[:-1]
-                            
-                    c_hat2 = c_hat.strip()
-                    c_hat2 = c_hat2.split('\n')[0]
+                    c_hat2, Pred = get_real_c_hat(c_hat, line_start)
                     
                     if is_number(c_hat2):
                         if '.' in c_hat2:
