@@ -141,6 +141,7 @@ def get_batch(split):
 iter_num = 0
 best_val_loss = 1e9
 best_accuracy = -1 # on addition data
+best_judgeacc = -1
 
 # attempt to derive vocab_size from the dataset
 meta_path = os.path.join(data_dir, 'meta.pkl')
@@ -190,6 +191,8 @@ elif init_from == 'resume':
         best_perplexity = checkpoint['best_perplexity']
     if 'best_accuracy' in checkpoint.keys():
         best_accuracy = checkpoint['best_accuracy']
+    if 'best_judgeacc' in checkpoint.keys():
+        best_judgeacc = checkpoint['best_judgeacc']
 elif init_from.startswith('gpt2'):
     print(f"Initializing from OpenAI GPT-2 weights: {init_from}")
     # initialize from OpenAI GPT-2 weights
@@ -306,6 +309,7 @@ while True:
                 'iter_num': iter_num,
                 'best_val_loss': best_val_loss,
                 'best_accuracy': best_accuracy,
+                'best_judgeacc': best_judgeacc if judge else None,
                 'config': config,
                 }
         if losses['val'] < best_val_loss or always_save_checkpoint:
@@ -321,6 +325,13 @@ while True:
             if iter_num > 0:
                 print(f"saving checkpoint to {out_dir}/{ckpt_path_name}")
                 torch.save(checkpoint, os.path.join(out_dir, ckpt_path_name.split('.pt')[0]+'_acc.pt'))
+        
+        if eval_addition and judge and judgement_accuracy > best_judgeacc:
+            best_judgeacc = judgement_accuracy
+            checkpoint['best_judgeacc'] = best_judgeacc
+            if iter_num > 0:
+                print(f"saving checkpoint to {out_dir}/{ckpt_path_name}")
+                torch.save(checkpoint, os.path.join(out_dir, ckpt_path_name.split('.pt')[0]+'_judge_acc.pt'))
         
     if iter_num == 0 and eval_only:
         break

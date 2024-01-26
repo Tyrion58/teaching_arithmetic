@@ -35,15 +35,20 @@ def get_abc(expression: str):
     """
     try:
         # 尝试将表达式中的 'a' 和 'b' 转换为整数
+        # 先去除首尾的空格与'\n'
+        expression = expression.strip()
+        # 对于有label数据
         if expression[0] == 'T' or expression[0] == 'F':
-            if expression[4] == 'T' or expression[4] == 'F':
-                expression = expression[6:]
-            else:
-                expression = expression[2:]
+            # 如果开头有label，去除label
+            expression = expression[1:].strip()
+        if expression[-1] == 'T' or expression[-1] == 'F':
+            # 如果末尾有label
+            expression = expression[:-1].strip()
         if '+' in expression:
             operation = '+'
         [a, b] = expression.split(operation)
-        b = b[:-1]
+        b = b.strip()
+        a = a.strip()
         if operation == '+':
             # 计算和
             c = int(a) + int(b)
@@ -220,10 +225,10 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_d
                         if c == c_hat2:
                             correct+=1
                             carry_dictionary[f'carry{num_carry}_correct']+=1
-                            if Pred == 'T':
+                            if judge and (Pred == 'T'):
                                 pred_correct+=1
                                 
-                        elif Pred == 'F':
+                        elif judge and (Pred == 'F'):
                             pred_correct+=1
                     else:
                         raise NotImplementedError
