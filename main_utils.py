@@ -47,7 +47,7 @@ def get_abc(expression: str):
         if '+' in expression:
             operation = '+'
         [a, b] = expression.split(operation)
-        b = b.strip('=')[0]
+        b = b.strip('=')
         a = a.strip()
         if operation == '+':
             # 计算和
