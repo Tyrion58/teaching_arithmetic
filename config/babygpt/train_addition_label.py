@@ -1,7 +1,7 @@
 # train a miniature character-level shakespeare model
 # good for debugging and playing on macbooks and such
 
-out_dir = 'out/out-addition-bilabel'
+out_dir = 'out/out-addition-label-nosp'
 eval_interval = 250 # keep frequent because we'll overfit
 eval_iters = 200
 log_interval = 10 # don't print too too often
@@ -11,7 +11,7 @@ always_save_checkpoint = False
 
 wandb_log = True # override via command line if you like
 wandb_project = 'addition'
-wandb_run_name = 'addition-bilabel'
+wandb_run_name = 'addition-label-nosp'
 
 dataset = 'addition_label'
 batch_size = 256
