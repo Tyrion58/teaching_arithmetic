@@ -47,7 +47,7 @@ def get_abc(expression: str):
         if '+' in expression:
             operation = '+'
         [a, b] = expression.split(operation)
-        b = b.strip('=')
+        b = b.split('=')[0].strip()
         a = a.strip()
         if operation == '+':
             # 计算和
@@ -116,6 +116,7 @@ def get_real_c_hat(fake_c_hat, line_start):
     
     if 'T' == line_start or 'F' == line_start:
         Pred = line_start
+        c_hat = fake_c_hat.split(line_start)[0]
         
     if c_hat != '':
         if 'T' == c_hat[-1] or 'F' == c_hat[-1]:
@@ -132,7 +133,6 @@ def get_real_c_hat(fake_c_hat, line_start):
 
 
 def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_digit=3):
-
     model.eval()
     start = config['start']
     device = config['device']
@@ -250,3 +250,110 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_d
         return pred_accuracy, accuracy, accuracy_dictionary
     
     return accuracy, accuracy_dictionary
+
+
+def eval_judge_batch(config, model, ctx, encode, decode, num_digit=3):
+    model.eval()
+    start = config['start']
+    device = config['device']
+    
+    test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
+    # 设置max_new_tokens为1，因为只需要输出判断结果
+    max_new_tokens = 1
+    
+    temperature = config['temperature'] if 'temperature' in config.keys() else 0.8
+    top_k = config['top_k'] if 'top_k' in config.keys() else 200
+    
+    print(f'evaluating addition from: {start}')
+    
+    if start.startswith('FILE:'):
+        with open(start[5:], 'r', encoding='utf-8') as f:
+            # 除去每一行后面的空白字符，保存为列表，列表的每一个元素是一个算式，如“2+2=”
+            lines = [line.rstrip() for line in f]
+    
+    else:
+        raise NotImplementedError("This method is not implemented yet!")
+    
+    pred_correct = 0
+    no_judge = 0
+    
+    #总行数，也是总算式个数
+    total = len(lines)
+    
+    carry_dictionary={f'carry{i}_correct':0 for i in range(num_digit+1)}
+    #注意区别，corrtec和total
+    carry_dictionary.update({f'carry{i}_total':0 for i in range(num_digit+1)})
+    prompt_dict = {}
+    
+    for line_idx in tqdm(range(total)):
+        #line_idx是所取出算式的index，取出对应行line
+        line = lines[line_idx]
+        line.strip('\n')
+        line_start = line[0]
+        line = line[1:]
+        # 对line这个string做编码
+        start_ids = encode(line)
+        # 将编码转换为张量，并额外加一个维度，从len(start_ids)变为(1,len(start_ids))
+        x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
+        # 在character level tokenization时，这个len_x其实就是len(start_ids)。。。
+        len_x = len(x[0])
+        a,b,c,op = get_abc(line)
+        a_d, b_d, num_carry = get_num_digits(a), get_num_digits(b), numCarryOps(a,b)
+        prompt_length = len(start_ids)
+        # NOTE: prompt_length != len(line) if we're not using character level tokenization
+        input_tuple = (x, len(line), line_start, a, b, c, a_d, b_d, num_carry)
+        if prompt_length in prompt_dict.keys():
+            prompt_dict[prompt_length].append(input_tuple)
+        else:
+            prompt_dict[prompt_length] = [input_tuple]
+        # prompt是一个字典，键值是所有可能出现的prompt_length
+        # 这样划分是为了保证每一个batch中的len_x相等
+        
+    # construct batches of prompts now
+    batch_list = []
+    for prompt_length in prompt_dict.keys():
+        input_tuple_list = prompt_dict[prompt_length]
+        for batch_idx in range(math.ceil(len(input_tuple_list)/test_batch_size)):
+            #每个sequence（或算式）对应一个tuple，每test_batch_size个tuple划分为同一个batch，对应这一个list，
+            # 也就是每个list就是一个batch，所有batch组成一个更大的batch_list
+            batch_list.append(input_tuple_list[batch_idx*test_batch_size:(batch_idx+1)*test_batch_size])
+            
+    for batch_idx in tqdm(range(len(batch_list))):
+        batch = batch_list[batch_idx]
+        # 单取出所有x
+        x_list = [input_tuple[0] for input_tuple in batch]
+        # x.size=(batch_size, )
+        x = torch.cat(x_list, dim=0)
+        # run generation
+        with torch.no_grad():
+            with ctx:
+                y = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k)
+                outcome_list = [decode(y_i.tolist()) for y_i in y]
+                # 下面逐个分析这个batch中的model的预测结果
+                for i, outcome in enumerate(outcome_list):
+                     # 取出对应的tuple
+                    _, len_x, line_start, a, b, c, a_d, b_d, num_carry = batch[i]
+                    Pred = outcome[-1]
+                    True_label = line_start
+                    if Pred == 'T' or Pred == 'F':
+                        if Pred == True_label:
+                            pred_correct += 1
+                            carry_dictionary[f'carry{num_carry}_correct']+=1
+                    else:
+                        no_judge += 1
+                        
+                    carry_dictionary[f'carry{num_carry}_total']+=1
+    
+    pred_accuracy = pred_correct/total*100
+    no_judging_probability = no_judge/total*100
+    
+    accuracy_dictionary = {f'carry{i}': carry_dictionary[f'carry{i}_correct']/carry_dictionary[f'carry{i}_total']*100 \
+        if carry_dictionary[f'carry{i}_total']!=0 else np.nan for i in range(num_digit+1)}
+    
+    print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
+    print(f"No judging probability of {total} examples: {no_judge}/{total} ({no_judging_probability}%)")
+    print(accuracy_dictionary)
+    
+    model.train()
+    
+    return pred_accuracy, no_judging_probability, accuracy_dictionary
