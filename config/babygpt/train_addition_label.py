@@ -1,7 +1,7 @@
 # train a miniature character-level shakespeare model
 # good for debugging and playing on macbooks and such
 
-out_dir = 'out/out-addition-label-nosp'
+out_dir = 'out/out-addition-bilabel-new'
 eval_interval = 250 # keep frequent because we'll overfit
 eval_iters = 200
 log_interval = 10 # don't print too too often
@@ -11,7 +11,7 @@ always_save_checkpoint = False
 
 wandb_log = True # override via command line if you like
 wandb_project = 'addition'
-wandb_run_name = 'addition-label-nosp'
+wandb_run_name = 'addition-bilabel-new'
 
 dataset = 'addition_label'
 batch_size = 256
@@ -21,7 +21,7 @@ val_data_path = 'val.bin'
 ckpt_path_name = 'ckpt.pt'
 eval_addition = True
 judge = True
-start = "FILE:data/addition_label/prompt_3digit_10000.txt"
+start = "FILE:data/addition_label/prompt_3digit_10000_new.txt"
 
 # baby GPT model :)
 n_layer = 6
