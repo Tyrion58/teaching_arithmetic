@@ -24,3 +24,5 @@ nohup python train.py config/babygpt/train_addition_labelV4.py &
 # 训练balanced label additionV3
 python train.py config/babygpt/train_addition_labelV4_2.py
 nohup python train.py config/babygpt/train_addition_labelV4_2.py &
+
+nohup python train.py config/babygpt/train_addition_bilabel_sp.py &
