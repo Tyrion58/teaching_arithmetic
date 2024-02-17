@@ -1,6 +1,6 @@
-*out/
+out/
 wandb/
 *out
 *pkl
 *bin
-*pt
+*.pt
