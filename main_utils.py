@@ -252,14 +252,14 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_d
     return accuracy, accuracy_dictionary
 
 
-def eval_judge_batch(config, model, ctx, encode, decode, num_digit=3):
+def eval_judge_batch(config, model, ctx, encode, decode, num_digit=3, max_new_tokens=1):
     model.eval()
     start = config['start']
     device = config['device']
     
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
     # 设置max_new_tokens为1，因为只需要输出判断结果
-    max_new_tokens = 1
+    max_new_tokens = max_new_tokens
     
     temperature = config['temperature'] if 'temperature' in config.keys() else 0.8
     top_k = config['top_k'] if 'top_k' in config.keys() else 200
