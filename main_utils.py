@@ -48,6 +48,7 @@ def get_abc(expression: str):
             operation = '+'
         [a, b] = expression.split(operation)
         b = b.split('=')[0].strip()
+        b = b.split('?')[0].strip()
         a = a.strip()
         if operation == '+':
             # 计算和
@@ -125,7 +126,7 @@ def get_real_c_hat(fake_c_hat, line_start):
     else:
         return c_hat, Pred
                             
-    c_hat2 = c_hat.strip()
+    c_hat2 = c_hat.split('?')[0].strip()
     c_hat2 = c_hat2.split('\n')[0]
     
 

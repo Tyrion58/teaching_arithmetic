@@ -25,4 +25,4 @@ nohup python train.py config/babygpt/train_addition_labelV4.py &
 python train.py config/babygpt/train_addition_labelV4_2.py
 nohup python train.py config/babygpt/train_addition_labelV4_2.py &
 
-nohup python train.py config/babygpt/train_addition_bilabel_sp.py &
+nohup python train.py config/babygpt/train_addition_bilabel.py &
