@@ -9,20 +9,9 @@ nohup python train.py config/babygpt/train_addition_bal.py &
 python train.py config/babygpt/train_addition_label.py
 nohup python train.py config/babygpt/train_addition_label.py &
 
-# 训练balanced label additionV2
-python train.py config/babygpt/train_addition_labelV2.py
-nohup python train.py config/babygpt/train_addition_labelV2.py &
-
-# 训练balanced label additionV3
-python train.py config/babygpt/train_addition_labelV3.py
-nohup python train.py config/babygpt/train_addition_labelV3.py &
-
-# 训练balanced label additionV3
-python train.py config/babygpt/train_addition_labelV4.py
-nohup python train.py config/babygpt/train_addition_labelV4.py &
-
-# 训练balanced label additionV3
-python train.py config/babygpt/train_addition_labelV4_2.py
-nohup python train.py config/babygpt/train_addition_labelV4_2.py &
-
 nohup python train.py config/babygpt/train_addition_bilabel.py &
+
+nohup python train.py config/babygpt/train_addition_bilabel_5neg.py &
+
+# addition reverse
+nohup python train.py config/babygpt/train_addition_rev.py &

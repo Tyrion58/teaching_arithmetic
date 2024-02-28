@@ -3,6 +3,11 @@ import torch
 import math
 import numpy as np
 
+
+def reverse_string(a: str) -> str:
+    return a[::-1]
+
+
 def get_encode_decode(meta_path=None, tokenizer='char'):
     import pickle, tiktoken
     # look for the meta pickle in case it is available in the dataset folder
@@ -34,21 +39,23 @@ def get_abc(expression: str):
     return: a(str), b(str), c(int), operation(str)
     """
     try:
-        # 尝试将表达式中的 'a' 和 'b' 转换为整数
         # 先去除首尾的空格与'\n'
         expression = expression.strip()
-        # 对于有label数据
-        if expression[0] == 'T' or expression[0] == 'F':
-            # 如果开头有label，去除label
-            expression = expression[1:].strip()
-        if expression[-1] == 'T' or expression[-1] == 'F':
-            # 如果末尾有label
-            expression = expression[:-1].strip()
+        
         if '+' in expression:
             operation = '+'
+            
         [a, b] = expression.split(operation)
+        
+        if a[0] == '$':
+            a = a[1:].strip()
+        
+        # 对于有label数据
+        if a[0] == 'T' or a[0] == 'F':
+            # 如果开头有label，去除label
+            a = a[1:].strip()
+       
         b = b.split('=')[0].strip()
-        b = b.split('?')[0].strip()
         a = a.strip()
         if operation == '+':
             # 计算和
@@ -115,10 +122,6 @@ def get_real_c_hat(fake_c_hat, line_start):
         c_hat = fake_c_hat.split('\n')[0]
     # 来处理\n开头的情况
     
-    if 'T' == line_start or 'F' == line_start:
-        Pred = line_start
-        c_hat = fake_c_hat.split(line_start)[0]
-        
     if c_hat != '':
         if 'T' == c_hat[-1] or 'F' == c_hat[-1]:
             Pred = c_hat[-1]
@@ -133,7 +136,7 @@ def get_real_c_hat(fake_c_hat, line_start):
     return c_hat2, Pred
 
 
-def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_digit=3):
+def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse_c=False, num_digit=3):
     model.eval()
     start = config['start']
     device = config['device']
@@ -214,6 +217,9 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge = False, num_d
                     c_hat = outcome[len_x:]
                     c_hat2, Pred = get_real_c_hat(c_hat, line_start)
                     
+                    if reverse_c:
+                        c_hat2 = reverse_string(c_hat2)
+                    
                     if is_number(c_hat2):
                         if '.' in c_hat2:
                             c_hat2 = float(c_hat2)
@@ -277,6 +283,10 @@ def eval_judge_batch(config, model, ctx, encode, decode, num_digit=3, max_new_to
     
     pred_correct = 0
     no_judge = 0
+    TP = 0 # True Positive
+    FP = 0 # False Positive
+    TN = 0 # True Negative
+    FN = 0 # False Positive
     
     #总行数，也是总算式个数
     total = len(lines)
@@ -336,10 +346,22 @@ def eval_judge_batch(config, model, ctx, encode, decode, num_digit=3, max_new_to
                     _, len_x, line_start, a, b, c, a_d, b_d, num_carry = batch[i]
                     Pred = outcome[-1]
                     True_label = line_start
-                    if Pred == 'T' or Pred == 'F':
-                        if Pred == True_label:
+                    if line_start == 'T':
+                        if Pred == 'T':
                             pred_correct += 1
                             carry_dictionary[f'carry{num_carry}_correct']+=1
+                            TP += 1
+                        elif Pred == 'F':
+                            FN += 1
+                            
+                    elif line_start == 'F':
+                        if Pred == 'F':
+                            pred_correct += 1
+                            carry_dictionary[f'carry{num_carry}_correct']+=1
+                            TN += 1
+                        elif Pred == 'T':
+                            FP += 1
+                            
                     else:
                         no_judge += 1
                         
@@ -353,6 +375,10 @@ def eval_judge_batch(config, model, ctx, encode, decode, num_digit=3, max_new_to
     
     print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
     print(f"No judging probability of {total} examples: {no_judge}/{total} ({no_judging_probability}%)")
+    print(f'True Positive Examples: {TP}/{total}')
+    print(f'False Positive Examples: {FP}/{total}')
+    print(f'True Negative Examples: {TN}/{total}')
+    print(f'False Negative Examples: {FN}/{total}')
     print(accuracy_dictionary)
     
     model.train()

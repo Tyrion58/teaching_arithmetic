@@ -79,6 +79,7 @@ tokenizer = 'char'
 eval_addition = False
 start = None
 judge = False
+reverse_c = False
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str, type(None)))]
 exec(open('configurator.py').read()) # overrides from command line or config file
@@ -287,9 +288,9 @@ while True:
             config['start'] = start
             print(start)
             if judge:
-                judgement_accuracy, test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge)
+                judgement_accuracy, test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge, reverse_c=reverse_c)
             else: 
-                test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode)
+                test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, reverse_c=reverse_c)
         
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
         if wandb_log:
