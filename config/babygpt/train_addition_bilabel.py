@@ -1,7 +1,7 @@
 # train a miniature character-level shakespeare model
 # good for debugging and playing on macbooks and such
 
-out_dir = 'out/out-addition-bilabel-0.2p'
+out_dir = 'out/out-addition-bilabel'
 eval_interval = 250 # keep frequent because we'll overfit
 eval_iters = 200
 log_interval = 10 # don't print too too often
@@ -11,18 +11,17 @@ always_save_checkpoint = False
 
 wandb_log = True # override via command line if you like
 wandb_project = 'addition'
-wandb_run_name = 'addition-bilabel-newdata'
+wandb_run_name = 'addition-bilabel'
 
-dataset = 'addition_bilabel'
+dataset = 'addition_bal'
 batch_size = 256
 block_size = 256 # context of up to 256 previous characters
 train_data_path = 'train.bin'
 val_data_path = 'val.bin'
 ckpt_path_name = 'ckpt.pt'
 eval_addition = True
+start = "FILE:data/addition_bal/prompt_addition_test_0.0001.txt"
 judge = True
-start = "FILE:data/addition_bilabel/prompt_3digit_bilabel10000.txt"
-
 # baby GPT model :)
 n_layer = 6
 n_head = 6
@@ -37,6 +36,7 @@ beta2 = 0.99 # make a bit bigger because number of tokens per iter is small
 warmup_iters = 100 # not super necessary potentially
 
 device='cuda:0'
+
 # on macbook also add
 # device = 'cpu'  # run on cpu only
 # compile = False # do not torch compile the model

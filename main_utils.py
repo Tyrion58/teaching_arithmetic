@@ -159,7 +159,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
         print(f"Evaluating Addition using test data file: {test_data_file}")
         # we know test examples are test.txt
         test_data_list = get_data_list(test_data_file, operator=operator, judge=judge)
-        test_data_str = generate_data_str(test_data_list, operator=operator, format=data_format, train=False, shuffle=True)
+        test_data_str = generate_data_str(test_data_list, operator=operator, format=data_format, train=False, shuffle=True, judge=judge)
       
         lines = test_data_str.split('\n')[:-1]    
     else:
@@ -403,6 +403,7 @@ def eval_judge_batch(config, model, ctx, encode, decode, num_digit=3, max_new_to
 def get_data_list(filename=None, operator='+', delim=None, judge=False):
     import re
     data_list = []
+    label = None
     if filename: # read data from file
         if operator in ['text']:
             with open(filename, 'r') as f:
@@ -420,7 +421,7 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False):
                     else:
                         raise ValueError('Can not recognize this label!')
                     
-                    line = line.strip(label).strip('?')
+                    line = line.split(label)[1].strip('?')
                 # if first char is $, assume it's a delimiter
                 if line[0] == '$':
                     delim = '$'
@@ -438,7 +439,7 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False):
                     elif operator == '*':
                         y2 = int(x1) * int(x2)
                     
-                    data_list.append((int(x1), int(x2), int(y2), operator))
+                    data_list.append((int(x1), int(x2), int(y2), label, operator))
 
 
     else: # generate random data
@@ -461,7 +462,7 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False):
                         y = x1 - x2
                     elif operator == '*':
                         y = x1 * x2
-                    data_list.append((int(x1), int(x2), int(y), operator))
+                    data_list.append((int(x1), int(x2), int(y), label, operator))
 
     return data_list
 
@@ -492,12 +493,12 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
                 # create test data (x1+x2=)
                 if format == 'plain':
                     if judge:
-                        output_str = f"{label}{x1}{operator}{x2}={y}?\n"
+                        output_str = f"T{x1}{operator}{x2}=\n"
                     else:
                         output_str = f"{x1}{operator}{x2}=\n"
                 elif format == 'reverse':
                     if judge:
-                        output_str = f"${label}{x1}{operator}{x2}={str(y)[::-1]}?\n"
+                        output_str = f"$T{x1}{operator}{x2}=\n"
                     else:
                         output_str = f"${x1}{operator}{x2}=\n"
             if idx == 0:
