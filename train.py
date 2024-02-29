@@ -319,7 +319,7 @@ while True:
             config['start'] = start
             print(start)
             if judge:
-                judgement_accuracy, test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge, reverse_c=reverse_c)
+                judgement_accuracy, test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge, reverse_c=reverse_c, data_format=data_format)
             else: 
                 test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, reverse_c=reverse_c, verbose=True, data_format=data_format)
         

@@ -19,7 +19,7 @@ eval_addition_train: false
 eval_interval: 250
 eval_iters: 200
 eval_only: false
-exp_name: add-bilabel-rev-10000
+exp_name: add-bilabel-rev-10000-label
 grad_clip: 1.0
 gradient_accumulation_steps: 1
 init_from: scratch
@@ -34,7 +34,7 @@ n_head: 6
 n_layer: 6
 operator: +
 out_dir: out-check-bilabel
-result_dir: out-check-bilabel/add-bilabel-rev-10000
+result_dir: out-check-bilabel/add-bilabel-rev-10000-label_1
 reverse_c: true
 start: FILE:data/bal/test_3digit_bilabel_10000.txt
 tokenizer: char
@@ -43,6 +43,6 @@ val_data_path: val.bin
 vocabulary: all_ascii_chars
 wandb_log: true
 wandb_project: addition
-wandb_run_name: add-bilabel-rev-10000
+wandb_run_name: add-bilabel-rev-10000-label
 warmup_iters: 100
 weight_decay: 0.1

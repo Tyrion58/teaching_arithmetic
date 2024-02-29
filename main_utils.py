@@ -51,13 +51,12 @@ def get_abc(expression: str):
             operation = '+'
             
         [a, b] = expression.split(operation)
-        
-        if a[0] == '$':
-            a = a[1:].strip()
-        
-        # 对于有label数据
+         # 对于有label数据
         if a[0] == 'T' or a[0] == 'F':
             # 如果开头有label，去除label
+            a = a[1:].strip()
+            
+        if a[0] == '$':
             a = a[1:].strip()
        
         b = b.split('=')[0].strip()
@@ -271,133 +270,6 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
     return accuracy, accuracy_dictionary
 
 
-def eval_judge_batch(config, model, ctx, encode, decode, num_digit=3, max_new_tokens=1):
-    model.eval()
-    start = config['start']
-    device = config['device']
-    
-    test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
-    # 设置max_new_tokens为1，因为只需要输出判断结果
-    max_new_tokens = max_new_tokens
-    
-    temperature = config['temperature'] if 'temperature' in config.keys() else 0.8
-    top_k = config['top_k'] if 'top_k' in config.keys() else 200
-    
-    print(f'evaluating addition from: {start}')
-    
-    if start.startswith('FILE:'):
-        with open(start[5:], 'r', encoding='utf-8') as f:
-            # 除去每一行后面的空白字符，保存为列表，列表的每一个元素是一个算式，如“2+2=”
-            lines = [line.rstrip() for line in f]
-    
-    else:
-        raise NotImplementedError("This method is not implemented yet!")
-    
-    pred_correct = 0
-    no_judge = 0
-    TP = 0 # True Positive
-    FP = 0 # False Positive
-    TN = 0 # True Negative
-    FN = 0 # False Positive
-    
-    #总行数，也是总算式个数
-    total = len(lines)
-    
-    carry_dictionary={f'carry{i}_correct':0 for i in range(num_digit+1)}
-    #注意区别，corrtec和total
-    carry_dictionary.update({f'carry{i}_total':0 for i in range(num_digit+1)})
-    prompt_dict = {}
-    
-    for line_idx in tqdm(range(total)):
-        #line_idx是所取出算式的index，取出对应行line
-        line = lines[line_idx]
-        line.strip('\n')
-        line_start = line[0]
-        line = line[1:]
-        # 对line这个string做编码
-        start_ids = encode(line)
-        # 将编码转换为张量，并额外加一个维度，从len(start_ids)变为(1,len(start_ids))
-        x = (torch.tensor(start_ids, dtype=torch.long, device=device)[None, ...])
-        # 在character level tokenization时，这个len_x其实就是len(start_ids)。。。
-        len_x = len(x[0])
-        a,b,c,op = get_abc(line)
-        a_d, b_d, num_carry = get_num_digits(a), get_num_digits(b), numCarryOps(a,b)
-        prompt_length = len(start_ids)
-        # NOTE: prompt_length != len(line) if we're not using character level tokenization
-        input_tuple = (x, len(line), line_start, a, b, c, a_d, b_d, num_carry)
-        if prompt_length in prompt_dict.keys():
-            prompt_dict[prompt_length].append(input_tuple)
-        else:
-            prompt_dict[prompt_length] = [input_tuple]
-        # prompt是一个字典，键值是所有可能出现的prompt_length
-        # 这样划分是为了保证每一个batch中的len_x相等
-        
-    # construct batches of prompts now
-    batch_list = []
-    for prompt_length in prompt_dict.keys():
-        input_tuple_list = prompt_dict[prompt_length]
-        for batch_idx in range(math.ceil(len(input_tuple_list)/test_batch_size)):
-            #每个sequence（或算式）对应一个tuple，每test_batch_size个tuple划分为同一个batch，对应这一个list，
-            # 也就是每个list就是一个batch，所有batch组成一个更大的batch_list
-            batch_list.append(input_tuple_list[batch_idx*test_batch_size:(batch_idx+1)*test_batch_size])
-            
-    for batch_idx in tqdm(range(len(batch_list))):
-        batch = batch_list[batch_idx]
-        # 单取出所有x
-        x_list = [input_tuple[0] for input_tuple in batch]
-        # x.size=(batch_size, )
-        x = torch.cat(x_list, dim=0)
-        # run generation
-        with torch.no_grad():
-            with ctx:
-                y = model.generate(x, max_new_tokens, temperature=temperature, top_k=top_k)
-                outcome_list = [decode(y_i.tolist()) for y_i in y]
-                # 下面逐个分析这个batch中的model的预测结果
-                for i, outcome in enumerate(outcome_list):
-                     # 取出对应的tuple
-                    _, len_x, line_start, a, b, c, a_d, b_d, num_carry = batch[i]
-                    Pred = outcome[-1]
-                    True_label = line_start
-                    if line_start == 'T':
-                        if Pred == 'T':
-                            pred_correct += 1
-                            carry_dictionary[f'carry{num_carry}_correct']+=1
-                            TP += 1
-                        elif Pred == 'F':
-                            FN += 1
-                            
-                    elif line_start == 'F':
-                        if Pred == 'F':
-                            pred_correct += 1
-                            carry_dictionary[f'carry{num_carry}_correct']+=1
-                            TN += 1
-                        elif Pred == 'T':
-                            FP += 1
-                            
-                    else:
-                        no_judge += 1
-                        
-                    carry_dictionary[f'carry{num_carry}_total']+=1
-    
-    pred_accuracy = pred_correct/total*100
-    no_judging_probability = no_judge/total*100
-    
-    accuracy_dictionary = {f'carry{i}': carry_dictionary[f'carry{i}_correct']/carry_dictionary[f'carry{i}_total']*100 \
-        if carry_dictionary[f'carry{i}_total']!=0 else np.nan for i in range(num_digit+1)}
-    
-    print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
-    print(f"No judging probability of {total} examples: {no_judge}/{total} ({no_judging_probability}%)")
-    print(f'True Positive Examples: {TP}/{total}')
-    print(f'False Positive Examples: {FP}/{total}')
-    print(f'True Negative Examples: {TN}/{total}')
-    print(f'False Negative Examples: {FN}/{total}')
-    print(accuracy_dictionary)
-    
-    model.train()
-    
-    return pred_accuracy, no_judging_probability, accuracy_dictionary
-
-
 # adding functions to streamline data loading/generation
 # get data from .txt file -> outputs list of tuples (x1, x2, y, operator) or (x, y, operator)
 def get_data_list(filename=None, operator='+', delim=None, judge=False):
@@ -486,7 +358,7 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
                         output_str = f"{x1}{operator}{x2}={y}\n"
                 elif format == 'reverse':
                     if judge:
-                        output_str = f"${label}{x1}{operator}{x2}={str(y)[::-1]}?{label}$\n"
+                        output_str = f"{label}${x1}{operator}{x2}={str(y)[::-1]}?${label}\n"
                     else:
                         output_str = f"${x1}{operator}{x2}={str(y)[::-1]}$\n"
             else:
@@ -498,7 +370,7 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
                         output_str = f"{x1}{operator}{x2}=\n"
                 elif format == 'reverse':
                     if judge:
-                        output_str = f"$T{x1}{operator}{x2}=\n"
+                        output_str = f"T${x1}{operator}{x2}=\n"
                     else:
                         output_str = f"${x1}{operator}{x2}=\n"
             if idx == 0:
