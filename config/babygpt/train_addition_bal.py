@@ -20,7 +20,7 @@ train_data_path = 'train.bin'
 val_data_path = 'val.bin'
 ckpt_path_name = 'ckpt.pt'
 eval_addition = True
-start = "FILE:data/addition_bal/prompt_addition_test_10000.txt"
+start = "FILE:data/addition_bal/prompt_addition_test_0.0001.txt"
 
 # baby GPT model :)
 n_layer = 6

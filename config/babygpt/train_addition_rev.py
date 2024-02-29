@@ -14,6 +14,8 @@ wandb_project = 'addition'
 wandb_run_name = 'addition-bilabel-rev'
 
 dataset = 'addition_reverse'
+data_format = 'reverse'
+reverse_c = True
 batch_size = 256
 block_size = 256 # context of up to 256 previous characters
 train_data_path = 'train.bin'
