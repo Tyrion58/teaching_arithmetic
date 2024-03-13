@@ -83,6 +83,7 @@ compile = True # use PyTorch 2.0 to compile the model to be faster
 tokenizer = 'char'
 data_format = 'plain' # 'plain' or 'reverse' or 'algo_reasoning'
 vocabulary = 'all_ascii_chars' # can be 'all_ascii_chars' or 'numbers_only' or 'custom_input_data'
+meta_path_specified = True # use saved meta_file (False if data_type='text')
 # eval_opeartion
 eval_addition = False
 eval_addition_train = False
@@ -129,24 +130,35 @@ ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torc
 ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
 # poor man's data loader
+if data_type == 'binary':
+    data_dir = os.path.join('data', dataset)
+    train_data = np.memmap(os.path.join(data_dir, train_data_path), dtype=np.uint16, mode='r')
+    val_data = np.memmap(os.path.join(data_dir, val_data_path), dtype=np.uint16, mode='r')
+    # test_data_str = None # test_data for addition testing will be handled with "start"
+    meta_path = None
 
-if ('reverse' in data_format and not reverse_c) or (reverse_c and 'reverse' not in data_format):
-            raise ValueError('reverse_c must be True for data_format == "reverse"')
+elif data_type == 'text':
 
-data_dir = os.path.join('data', dataset)
-train_data_path = os.path.join(data_dir, train_data_path)
+    if ('reverse' in data_format and not reverse_c) or (reverse_c and 'reverse' not in data_format):
+        raise ValueError('reverse_c must be True for data_format == "reverse"')
 
-train_data_list = get_data_list(train_data_path, operator=operator, judge=judge)
-val_data_list = get_data_list(filename=None, operator=operator, judge=judge) # get_data_list(val_data, operator='+')
+    data_dir = os.path.join('data', dataset)
+    train_data_path = os.path.join(data_dir, train_data_path)
 
-train_data_str = generate_data_str(train_data_list, operator=operator, format=data_format, shuffle=True, train=True, judge=judge)
-val_data_str = generate_data_str(val_data_list, operator=operator, format=data_format, shuffle=True, train=True, judge=judge)
+    train_data_list = get_data_list(train_data_path, operator=operator, judge=judge)
+    val_data_list = get_data_list(filename=None, operator=operator, judge=judge) # get_data_list(val_data, operator='+')
 
-meta, meta_path, data_encoder, data_decoder = create_meta_file(vocabulary=vocabulary, 
+    train_data_str = generate_data_str(train_data_list, operator=operator, format=data_format, shuffle=True, train=True, judge=judge)
+    val_data_str = generate_data_str(val_data_list, operator=operator, format=data_format, shuffle=True, train=True, judge=judge)
+
+    meta, meta_path, data_encoder, data_decoder = create_meta_file(vocabulary=vocabulary, 
                                                                input_data_str=train_data_str, tokenizer=tokenizer)
-meta_vocab_size = meta['vocab_size']
-train_data = data_encoder(train_data_str)
-val_data = data_encoder(val_data_str)
+    meta_vocab_size = meta['vocab_size']
+    train_data = data_encoder(train_data_str)
+    val_data = data_encoder(val_data_str)
+    
+else:
+    raise ValueError('Unexpected data type!')
 
 def get_batch(split):
     data = train_data if split == 'train' else val_data
@@ -169,14 +181,17 @@ best_val_loss = 1e9
 best_accuracy = -1 # on addition data
 best_judgeacc = -1
 
-# attempt to derive vocab_size from the dataset
-# meta_path = os.path.join(data_dir, 'meta.pkl')
-#meta_vocab_size = None
-#if os.path.exists(meta_path):
-#    with open(meta_path, 'rb') as f:
-#        meta = pickle.load(f)
-#    meta_vocab_size = meta['vocab_size']
-#    print(f"found vocab_size = {meta_vocab_size} (inside {meta_path})")
+if meta_path_specified and data_type=='binary':
+    # attempt to derive vocab_size from the dataset
+    meta_path = os.path.join(data_dir, 'meta.pkl')
+    meta_vocab_size = None
+    if os.path.exists(meta_path):
+        with open(meta_path, 'rb') as f:
+            meta = pickle.load(f)
+        meta_vocab_size = meta['vocab_size']
+        print(f"found vocab_size = {meta_vocab_size} (inside {meta_path})")
+    else:
+        meta_path = None
 
 # model init
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,

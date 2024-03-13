@@ -25,10 +25,18 @@ python train.py config/babygpt/train_addition_bal.py \
     --eval_addition=True --start='FILE:data/bal/test_3digit_10000.txt' \
     --eval_addition_train=True
 
+    python train.py config/babygpt/train_addition_bal.py \
+    --wandb_run_name="add-bal-rev_10000" \
+    --ckpt_path_name="ckpt_10000.pt" \
+    --out_dir='out-check-new-rev' \
+    --data_type='binary' --data_format='reverse' --reverse_c=True \
+    --dataset='bal' \
+    --eval_addition=True --start='FILE:data/bal/test_3digit_10000.txt' \
+
 python train.py config/babygpt/train_addition_bilabel.py \
     --wandb_run_name="add-bilabel-10000" \
     --ckpt_path_name="ckpt_10000.pt" \
-    --out_dir='out-check-bilabel-rev' \
+    --out_dir='out-check-bilabel' \
     --data_type='text' --data_format='plain' --reverse_c=False \
     --dataset='bal' --train_data_path="train_3digit_bilabel_10000.txt" \
     --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_10000.txt' \
@@ -41,3 +49,21 @@ python train.py config/babygpt/train_addition_bilabel.py \
     --data_type='text' --data_format='reverse' --reverse_c=True \
     --dataset='bal' --train_data_path="train_3digit_bilabel_10000.txt" \
     --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_10000.txt' \
+
+python train.py config/babygpt/train_addition_bilabel.py \
+    --wandb_run_name="add-bilabel-10000-label-ga40" \
+    --ckpt_path_name="ckpt_10000.pt" \
+    --out_dir='out-check-bilabel-label-ga40' \
+    --data_type='text' --data_format='plain' --reverse_c=False \
+    --dataset='bal' --train_data_path="train_3digit_bilabel_10000.txt" \
+    --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_10000.txt' \
+    --gradient_accumulation_steps=40
+
+python train.py config/babygpt/train_addition_bilabel.py \
+    --wandb_run_name="add-bilabel-10000-last-dig" \
+    --ckpt_path_name="ckpt_10000.pt" \
+    --out_dir='out-check-bilabel-last-dig' \
+    --data_type='text' --data_format='plain' --reverse_c=False \
+    --dataset='bal' --train_data_path="train_3digit_bilabel_last_dig10000.txt" \
+    --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_last_dig10000.txt' \
+    --gradient_accumulation_steps=1 \
