@@ -60,10 +60,28 @@ python train.py config/babygpt/train_addition_bilabel.py \
     --gradient_accumulation_steps=40
 
 python train.py config/babygpt/train_addition_bilabel.py \
-    --wandb_run_name="add-bilabel-10000-last-dig" \
+    --wandb_run_name="add-bilabel-10000-last-dig-V1" \
     --ckpt_path_name="ckpt_10000.pt" \
-    --out_dir='out-check-bilabel-last-dig' \
+    --out_dir='out-check-bilabel-last-dig-V1' \
+    --data_type='text' --data_format='plain' --reverse_c=False \
+    --dataset='bal' --train_data_path="train_3digit_bilabel_last_digV1_10000.txt" \
+    --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_last_digV1_10000.txt' \
+    --gradient_accumulation_steps=1 \
+
+python train.py config/babygpt/train_addition_bilabel.py \
+    --wandb_run_name="add-bilabel-10000-last-dig-V2" \
+    --ckpt_path_name="ckpt_10000.pt" \
+    --out_dir='out-check-bilabel-last-dig-V2' \
     --data_type='text' --data_format='plain' --reverse_c=False \
     --dataset='bal' --train_data_path="train_3digit_bilabel_last_dig10000.txt" \
     --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_last_dig10000.txt' \
+    --gradient_accumulation_steps=1 \
+
+python train.py config/babygpt/train_addition_bilabel.py \
+    --wandb_run_name="add-bilabel-10000-V2" \
+    --ckpt_path_name="ckpt_10000.pt" \
+    --out_dir='out-check-bilabel-V2' \
+    --data_type='text' --data_format='plain' --reverse_c=False \
+    --dataset='bal' --train_data_path="train_3digit_bilabel_V2_10000.txt" \
+    --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_V2_10000.txt' \
     --gradient_accumulation_steps=1 \

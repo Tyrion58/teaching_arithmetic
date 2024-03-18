@@ -157,10 +157,14 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
         test_data_file = start[5:]
         print(f"Evaluating Addition using test data file: {test_data_file}")
         # we know test examples are test.txt
-        test_data_list = get_data_list(test_data_file, operator=operator, judge=judge)
+        test_data_list = get_data_list(test_data_file, operator=operator, judge=judge, test=True)
         test_data_str = generate_data_str(test_data_list, operator=operator, format=data_format, train=False, shuffle=True, judge=judge)
       
-        lines = test_data_str.split('\n')[:-1]    
+        lines = test_data_str.split('\n')[:-1]
+        for i, line in enumerate(lines):
+            # 去除所有judge line
+            if line.startswith('j'):
+                lines.pop(i)
     else:
         raise NotImplementedError("This method is not implemented yet!")
     
@@ -239,24 +243,24 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
                         if c == c_hat2:
                             correct+=1
                             carry_dictionary[f'carry{num_carry}_correct']+=1
-                            if judge and (Pred == 'T'):
-                                pred_correct+=1
+                            # if judge and (Pred == 'T'):
+                            #    pred_correct+=1
                         else:
                             print('outputs(x): ', outcome)
                             print(f'wrong  : {a}{op}{b}={c_hat2}')
                             print(f'correct: {a}{op}{b}={c}')
                                 
-                            if judge and (Pred == 'F'):
-                                pred_correct+=1
+                            # if judge and (Pred == 'F'):
+                            #    pred_correct+=1
                     else:
                         raise NotImplementedError
                     
                     
                     carry_dictionary[f'carry{num_carry}_total']+=1
                     # metric_types = ['mse', 'normalized_mse', 'digit_wise_difference', 'incorrect_digit_count']
-    if judge:
-        pred_accuracy = pred_correct/total*100
-        print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
+    # if judge:
+    #    pred_accuracy = pred_correct/total*100
+    #    print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
     accuracy = correct/total*100
     print(f"accuracy of {total} examples: {correct}/{total} ({accuracy}%)")
     accuracy_dictionary = {f'carry{i}': carry_dictionary[f'carry{i}_correct']/carry_dictionary[f'carry{i}_total']*100 \
@@ -264,15 +268,15 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
     print(accuracy_dictionary)
     
     model.train()
-    if judge:
-        return pred_accuracy, accuracy, accuracy_dictionary
+    # if judge:
+        # return pred_accuracy, accuracy, accuracy_dictionary
     
     return accuracy, accuracy_dictionary
 
 
 # adding functions to streamline data loading/generation
 # get data from .txt file -> outputs list of tuples (x1, x2, y, operator) or (x, y, operator)
-def get_data_list(filename=None, operator='+', delim=None, judge=False):
+def get_data_list(filename=None, operator='+', delim=None, judge=False, test=False):
     import re
     data_list = []
     label = None
@@ -290,10 +294,19 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False):
                 if judge:
                     if line[0] in ['T', 'F']:
                         label = line[0]
+                        line = line.split(label)[1].strip('?')
+                    elif line.startswith('j'):
+                        label = line[-2]
+                        pattern = r"\d+"
+                        numbers = re.findall(pattern, line)
+                        numbers = [int(number) for number in numbers]
+                        x1, x2, y2 = numbers
+                        data_list.append((int(x1), int(x2), int(y2), label, 'judge'))
+                        continue
                     else:
                         raise ValueError('Can not recognize this label!')
                     
-                    line = line.split(label)[1].strip('?')
+                    
                 # if first char is $, assume it's a delimiter
                 if line[0] == '$':
                     delim = '$'
@@ -303,13 +316,15 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False):
                 # x1, x2 = line.strip().split(operator)
                 if operator in ['+', '-', '*']:
                     x1, x2 = re.split(r'[+\-\*]', line.strip())
-                    x2, y = x2.split("=")
-                    if operator == '+':
-                        y2 = int(x1) + int(x2)
-                    elif operator == '-':
-                        y2 = int(x1) - int(x2)
-                    elif operator == '*':
-                        y2 = int(x1) * int(x2)
+                    x2, y2 = x2.split("=")
+                    y2 = y2.strip()
+                    if test:
+                        if operator == '+':
+                            y2 = int(x1) + int(x2)
+                        elif operator == '-':
+                            y2 = int(x1) - int(x2)
+                        elif operator == '*':
+                            y2 = int(x1) * int(x2)
                     
                     data_list.append((int(x1), int(x2), int(y2), label, operator))
 
@@ -377,6 +392,31 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
                 data_str = output_str
             else:
                 data_str += output_str
+        
+        elif operator in ['judge'] and judge:
+            x1, x2, y, label = data_tuple[0], data_tuple[1], data_tuple[2], data_tuple[3]
+            if train:
+                if format == 'plain':
+                    output_str = f"j({x1}{operator}{x2}={y})~{label}\n"
+                elif format == 'reverse':
+                    output_str = f"j({x1}{operator}{x2}={str(y)[::-1]})~{label}\n"
+                else:
+                    raise ValueError('Format must be plain or reverse!')
+            else:
+                # test case
+                if format == 'plain':
+                    output_str = f"j({x1}{operator}{x2}={y})~\n"
+                elif format == 'reverse':
+                    output_str = f"j({x1}{operator}{x2}={str(y)[::-1]})~\n"
+                else:
+                    raise ValueError('Format must be plain or reverse!')
+                    
+            if idx == 0:
+                data_str = output_str
+            else:
+                data_str += output_str
+        else:
+            raise ValueError('Illegal operator!')
 
     return data_str
 
