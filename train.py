@@ -20,6 +20,7 @@ import os
 import time
 import math
 import pickle
+import yaml
 from contextlib import nullcontext
 
 import numpy as np
@@ -28,7 +29,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 
 from model import GPTConfig, GPT
-from main_utils import eval_addition_batch, get_encode_decode
+from main_utils import *
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -44,9 +45,13 @@ init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
 wandb_log = False # disabled by default
 wandb_project = 'owt'
 wandb_run_name = 'gpt2' # 'run' + str(time.time())
+exp_name = 'default_exp_name'
 # data
-dataset = 'openwebtext'
-gradient_accumulation_steps = 5 * 8 # used to simulate larger batch sizes
+dataset = 'bal'
+train_data_path = 'train.bin'
+val_data_path = 'val.bin'
+operator = '+'
+gradient_accumulation_steps = 1 # used to simulate larger batch sizes
 batch_size = 12 # if gradient_accumulation_steps > 1, this is the micro-batch size
 block_size = 1024
 # model
@@ -71,14 +76,20 @@ min_lr = 6e-5 # minimum learning rate, should be ~= learning_rate/10 per Chinchi
 # DDP settings
 backend = 'nccl' # 'nccl', 'gloo', etc.
 # system
+data_type = 'binary' # 'binary' by default, can be 'text'
 device = 'cuda' # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
 dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
 compile = True # use PyTorch 2.0 to compile the model to be faster
 tokenizer = 'char'
+data_format = 'plain' # 'plain' or 'reverse' or 'algo_reasoning'
+vocabulary = 'all_ascii_chars' # can be 'all_ascii_chars' or 'numbers_only' or 'custom_input_data'
+meta_path_specified = True # use saved meta_file (False if data_type='text')
 # eval_opeartion
 eval_addition = False
+eval_addition_train = False
 start = None
 judge = False
+reverse_c = False
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str, type(None)))]
 exec(open('configurator.py').read()) # overrides from command line or config file
@@ -119,9 +130,36 @@ ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torc
 ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
 # poor man's data loader
-data_dir = os.path.join('data', dataset)
-train_data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
-val_data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
+if data_type == 'binary':
+    data_dir = os.path.join('data', dataset)
+    train_data = np.memmap(os.path.join(data_dir, train_data_path), dtype=np.uint16, mode='r')
+    val_data = np.memmap(os.path.join(data_dir, val_data_path), dtype=np.uint16, mode='r')
+    # test_data_str = None # test_data for addition testing will be handled with "start"
+    meta_path = None
+
+elif data_type == 'text':
+
+    if ('reverse' in data_format and not reverse_c) or (reverse_c and 'reverse' not in data_format):
+        raise ValueError('reverse_c must be True for data_format == "reverse"')
+
+    data_dir = os.path.join('data', dataset)
+    train_data_path = os.path.join(data_dir, train_data_path)
+
+    train_data_list = get_data_list(train_data_path, operator=operator, judge=judge)
+    val_data_list = get_data_list(filename=None, operator=operator, judge=judge) # get_data_list(val_data, operator='+')
+
+    train_data_str = generate_data_str(train_data_list, operator=operator, format=data_format, shuffle=True, train=True, judge=judge)
+    val_data_str = generate_data_str(val_data_list, operator=operator, format=data_format, shuffle=True, train=True, judge=judge)
+
+    meta, meta_path, data_encoder, data_decoder = create_meta_file(vocabulary=vocabulary, 
+                                                               input_data_str=train_data_str, tokenizer=tokenizer)
+    meta_vocab_size = meta['vocab_size']
+    train_data = data_encoder(train_data_str)
+    val_data = data_encoder(val_data_str)
+    
+else:
+    raise ValueError('Unexpected data type!')
+
 def get_batch(split):
     data = train_data if split == 'train' else val_data
     # 如果小于len(data)-block_size，输入将不能满足刚好是一个block_size的大小
@@ -143,14 +181,17 @@ best_val_loss = 1e9
 best_accuracy = -1 # on addition data
 best_judgeacc = -1
 
-# attempt to derive vocab_size from the dataset
-meta_path = os.path.join(data_dir, 'meta.pkl')
-meta_vocab_size = None
-if os.path.exists(meta_path):
-    with open(meta_path, 'rb') as f:
-        meta = pickle.load(f)
-    meta_vocab_size = meta['vocab_size']
-    print(f"found vocab_size = {meta_vocab_size} (inside {meta_path})")
+if meta_path_specified and data_type=='binary':
+    # attempt to derive vocab_size from the dataset
+    meta_path = os.path.join(data_dir, 'meta.pkl')
+    meta_vocab_size = None
+    if os.path.exists(meta_path):
+        with open(meta_path, 'rb') as f:
+            meta = pickle.load(f)
+        meta_vocab_size = meta['vocab_size']
+        print(f"found vocab_size = {meta_vocab_size} (inside {meta_path})")
+    else:
+        meta_path = None
 
 # model init
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
@@ -272,6 +313,12 @@ running_mfu = -1.0
 encode, decode = get_encode_decode(meta_path, tokenizer=tokenizer)
 result_dict = {'iter': [], 'train_loss': [], 'val_loss': [], 'val_ppl': [], 'test_acc': [], 
                'train_acc': [], 'test_acc_ar': [], 'test_acc_other': []}
+
+result_dir = get_results_dir(config)
+config['result_dir'] = result_dir
+with open(os.path.join(result_dir, "config.yaml"), "w") as yaml_file:
+    yaml.dump(config, yaml_file, default_flow_style=False)
+
 while True:
 
     # determine and set the learning rate for this iteration
@@ -286,10 +333,10 @@ while True:
         if eval_addition:
             config['start'] = start
             print(start)
-            if judge:
-                judgement_accuracy, test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge)
-            else: 
-                test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode)
+            # if judge:
+            #     judgement_accuracy, test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge, reverse_c=reverse_c, data_format=data_format)
+            # else: 
+            test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge=True, reverse_c=reverse_c, verbose=True, data_format=data_format)
         
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
         if wandb_log:
@@ -300,7 +347,7 @@ while True:
                 "lr": lr,
                 "mfu": running_mfu*100, # convert to percentage
                 "test/accuracy": test_accuracy if eval_addition else None,
-                "test/judge_accuracy": judgement_accuracy if judge and eval_addition else None, 
+                # "test/judge_accuracy": judgement_accuracy if judge and eval_addition else None, 
             })
         checkpoint = {
                 'model': raw_model.state_dict(),
@@ -309,7 +356,7 @@ while True:
                 'iter_num': iter_num,
                 'best_val_loss': best_val_loss,
                 'best_accuracy': best_accuracy,
-                'best_judgeacc': best_judgeacc if judge else None,
+                # 'best_judgeacc': best_judgeacc if judge else None,
                 'config': config,
                 }
         if losses['val'] < best_val_loss or always_save_checkpoint:
@@ -326,12 +373,12 @@ while True:
                 print(f"saving checkpoint to {out_dir}/{ckpt_path_name}")
                 torch.save(checkpoint, os.path.join(out_dir, ckpt_path_name.split('.pt')[0]+'_acc.pt'))
         
-        if eval_addition and judge and judgement_accuracy > best_judgeacc:
-            best_judgeacc = judgement_accuracy
-            checkpoint['best_judgeacc'] = best_judgeacc
-            if iter_num > 0:
-                print(f"saving checkpoint to {out_dir}/{ckpt_path_name}")
-                torch.save(checkpoint, os.path.join(out_dir, ckpt_path_name.split('.pt')[0]+'_judge_acc.pt'))
+        # if eval_addition and judge and judgement_accuracy > best_judgeacc:
+        #    best_judgeacc = judgement_accuracy
+        #    checkpoint['best_judgeacc'] = best_judgeacc
+        #    if iter_num > 0:
+        #        print(f"saving checkpoint to {out_dir}/{ckpt_path_name}")
+        #        torch.save(checkpoint, os.path.join(out_dir, ckpt_path_name.split('.pt')[0]+'_judge_acc.pt'))
         
     if iter_num == 0 and eval_only:
         break
