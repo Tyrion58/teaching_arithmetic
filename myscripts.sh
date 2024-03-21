@@ -85,3 +85,25 @@ python train.py config/babygpt/train_addition_bilabel.py \
     --dataset='bal' --train_data_path="train_3digit_bilabel_V2_10000.txt" \
     --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_V2_10000.txt' \
     --gradient_accumulation_steps=1 \
+
+# 仅训练judge
+python train.py config/babygpt/train_addition_judge.py \
+    --gradient_accumulation_steps=1 \
+
+# 仅训练addition
+python train.py config/babygpt/train_addition_bal.py \
+    --wandb_run_name="add-only-10000" \
+    --ckpt_path_name="ckpt_10000.pt" \
+    --out_dir='out-check-add-only' \
+    --data_type='text' --data_format='plain' --reverse_c=False \
+    --dataset='bal' --train_data_path="train_3digit_10000.txt" \
+    --eval_addition=True --start='FILE:data/bal/test_3digit_10000.txt' \
+    --gradient_accumulation_steps=1 
+
+# 从judge-only训练addition
+python train.py config/babygpt/train_addition_from_judge.py \
+    --gradient_accumulation_steps=1 
+
+# 增加GA尝试
+nohup python train.py config/babygpt/train_addition_from_judge.py --gradient_accumulation_steps=40 \
+    --wandb_run_name="add-only-10000GA40" --out_dir='out/out-check-add-onlyGA40' &

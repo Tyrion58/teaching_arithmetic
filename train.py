@@ -30,6 +30,7 @@ from torch.distributed import init_process_group, destroy_process_group
 
 from model import GPTConfig, GPT
 from main_utils import *
+from test_utils import eval_judge_batch
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -41,6 +42,7 @@ eval_iters = 200
 eval_only = False # if True, script exits right after the first eval
 always_save_checkpoint = True # if True, always save a checkpoint after each eval
 init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
+resume_from = None
 # wandb logging
 wandb_log = False # disabled by default
 wandb_project = 'owt'
@@ -86,8 +88,10 @@ vocabulary = 'all_ascii_chars' # can be 'all_ascii_chars' or 'numbers_only' or '
 meta_path_specified = True # use saved meta_file (False if data_type='text')
 # eval_opeartion
 eval_addition = False
-eval_addition_train = False
+eval_judge = False
 start = None
+judge_start = None
+judge_mode = 'bilabel'
 judge = False
 reverse_c = False
 # -----------------------------------------------------------------------------
@@ -206,9 +210,13 @@ if init_from == 'scratch':
     gptconf = GPTConfig(**model_args)
     model = GPT(gptconf)
 elif init_from == 'resume':
-    print(f"Resuming training from {out_dir}")
     # resume training from a checkpoint.
-    ckpt_path = os.path.join(out_dir, 'ckpt.pt')
+    if resume_from is not None:
+        ckpt_path = resume_from
+    else:
+        ckpt_path = os.path.join(out_dir, 'ckpt.pt')
+    
+    print(f"Resuming training from {ckpt_path}")
     checkpoint = torch.load(ckpt_path, map_location=device)
     checkpoint_model_args = checkpoint['model_args']
     # force these config attributes to be equal otherwise we can't even resume training
@@ -333,10 +341,14 @@ while True:
         if eval_addition:
             config['start'] = start
             print(start)
-            # if judge:
-            #     judgement_accuracy, test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge, reverse_c=reverse_c, data_format=data_format)
-            # else: 
-            test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge=True, reverse_c=reverse_c, verbose=True, data_format=data_format)
+            test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge=judge, reverse_c=reverse_c, verbose=True, data_format=data_format)
+        
+        if eval_judge:
+            if not judge:
+                print("Please make sure your model has judgement ability")
+            config['judge_start'] = judge_start
+            print(judge_start)
+            pred_accuracy, no_judging_probability, _ = eval_judge_batch(config, model, ctx, encode, decode, data_format=data_format, reverse_c=reverse_c, mode=judge_mode)
         
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
         if wandb_log:
@@ -347,7 +359,7 @@ while True:
                 "lr": lr,
                 "mfu": running_mfu*100, # convert to percentage
                 "test/accuracy": test_accuracy if eval_addition else None,
-                # "test/judge_accuracy": judgement_accuracy if judge and eval_addition else None, 
+                "test/judge_accuracy": pred_accuracy if eval_judge else None, 
             })
         checkpoint = {
                 'model': raw_model.state_dict(),
@@ -356,7 +368,7 @@ while True:
                 'iter_num': iter_num,
                 'best_val_loss': best_val_loss,
                 'best_accuracy': best_accuracy,
-                # 'best_judgeacc': best_judgeacc if judge else None,
+                'best_judgeacc': best_judgeacc if eval_judge else None,
                 'config': config,
                 }
         if losses['val'] < best_val_loss or always_save_checkpoint:
@@ -373,12 +385,12 @@ while True:
                 print(f"saving checkpoint to {out_dir}/{ckpt_path_name}")
                 torch.save(checkpoint, os.path.join(out_dir, ckpt_path_name.split('.pt')[0]+'_acc.pt'))
         
-        # if eval_addition and judge and judgement_accuracy > best_judgeacc:
-        #    best_judgeacc = judgement_accuracy
-        #    checkpoint['best_judgeacc'] = best_judgeacc
-        #    if iter_num > 0:
-        #        print(f"saving checkpoint to {out_dir}/{ckpt_path_name}")
-        #        torch.save(checkpoint, os.path.join(out_dir, ckpt_path_name.split('.pt')[0]+'_judge_acc.pt'))
+        if eval_judge and pred_accuracy > best_judgeacc:
+            best_judgeacc = pred_accuracy
+            checkpoint['best_judgeacc'] = best_judgeacc
+            if iter_num > 0:
+                print(f"saving checkpoint to {out_dir}/{ckpt_path_name}")
+                torch.save(checkpoint, os.path.join(out_dir, ckpt_path_name.split('.pt')[0]+'_judge_acc.pt'))
         
     if iter_num == 0 and eval_only:
         break

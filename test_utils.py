@@ -5,11 +5,11 @@ from contextlib import nullcontext
 import re
 
 
-def eval_judge_batch(config, model, ctx, encode, decode, operator='+', data_format='plain', reverse_c=False, num_digit=3, max_new_tokens=1, mode='bilabel'):
+def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', reverse_c=False, num_digit=3, max_new_tokens=1, mode='bilabel'):
     model.eval()
-    start = config['start']
+    start = config['judge_start']
     device = config['device']
-    test_data_file = start[5:]
+    # test_data_file = start[5:]
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
     # 设置max_new_tokens为1，因为只需要输出判断结果
     max_new_tokens = max_new_tokens
@@ -55,13 +55,19 @@ def eval_judge_batch(config, model, ctx, encode, decode, operator='+', data_form
         #line_idx是所取出算式的index，取出对应行line
         line = lines[line_idx]
         line = line.strip('\n')
-        # if mode in ['bilabel']:
-        label = line[0]
-        line = line[1:]
-        # elif mode in ['judge_op']:
-        #    label = line[-1]
-        #    pattern = r"\((.*?)\)"
-        #    line = re.search(pattern, line).group(1)
+   
+        if line[0] == 'j':
+            label = line.split('~')[-1]
+            line = line.split('~')[0]
+            pattern = r"\d+"
+            numbers = re.findall(pattern, line)
+            numbers = [int(number) for number in numbers]
+            x1, x2, y2 = numbers
+            line = f'{x1}+{x2}={y2}?'
+        else:
+            label = line[0]
+            line = line[1:]
+    
         if data_format=='reverse':
             line = '$'+line+'$'
         # 对line这个string做编码
@@ -184,7 +190,7 @@ class model_tester:
     def test_extra(self):
         ctx = nullcontext()
         config={
-            'start': self.extra_path,
+            'judge_start': self.extra_path,
             'device': self.device,
         }
         eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
@@ -193,7 +199,7 @@ class model_tester:
     def test_add_noise(self):
         ctx = nullcontext()
         config={
-            'start': self.add_noise_path,
+            'judge_start': self.add_noise_path,
             'device': self.device,
         }
         eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
