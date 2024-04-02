@@ -123,6 +123,9 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
                         elif Pred == 'F':
                             FN += 1
                             print('wrong outputs(x): ', outcome)
+                        else: 
+                            no_judge += 1
+                            print('no judging outputs(x): ', outcome)
                             
                     elif label == 'F':
                         if Pred == 'F':
@@ -132,7 +135,9 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
                         elif Pred == 'T':
                             FP += 1
                             print('wrong outputs(x): ', outcome)
-                            
+                        else:
+                            no_judge += 1
+                            print('no judging outputs(x): ', outcome)
                     else:
                         no_judge += 1
                         
@@ -204,3 +209,45 @@ class model_tester:
         }
         eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
                          data_format=self.dataformat, reverse_c=self.rev_c, mode=self.mode)
+        
+class model_addition_tester:
+    def __init__(self, model_path, 
+                 meta_path='meta_all_ascii_chars.pkl',
+                 test_file='./bal/train_3digit_10000.txt',
+                 num_digit=3,
+                 data_format='plain',
+                 reverse_c=False,
+                 operator='+',
+                 mydevice='mps') -> None:
+        
+        self.meta_path = meta_path
+        self.test_file = 'FILE:' + test_file
+        self.num_digit = num_digit
+        self.data_format = data_format
+        self.reverse_c = reverse_c
+        self.operator = operator
+        self.device = mydevice
+        
+         # init from a model saved in a specific directory
+        ckpt_path = model_path
+        checkpoint = torch.load(ckpt_path, map_location=mydevice)
+        gptconf = GPTConfig(**checkpoint['model_args'])
+        self.model = GPT(gptconf)
+        state_dict = checkpoint['model']
+        unwanted_prefix = '_orig_mod.'
+        for k,v in list(state_dict.items()):
+            if k.startswith(unwanted_prefix):
+                state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+        self.model.load_state_dict(state_dict)
+        self.model.to(mydevice)
+        self.encode, self.decode = get_encode_decode(meta_path)
+        
+    def test_addition(self):
+        ctx = nullcontext()
+        config={
+            'start': self.test_file,
+            'device': self.device,
+        }
+        eval_addition_batch(config=config, model=self.model, ctx=ctx, encode=self.encode, 
+                            decode=self.decode, judge=False, reverse_c=self.reverse_c, num_digit=self.num_digit,
+                            data_format=self.data_format, operator=self.operator)

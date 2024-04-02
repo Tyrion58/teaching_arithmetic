@@ -234,14 +234,15 @@ elif init_from == 'resume':
         if k.startswith(unwanted_prefix):
             state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
     model.load_state_dict(state_dict)
-    iter_num = checkpoint['iter_num']
+    iter_num = 0 if resume_from else checkpoint['iter_num']
     best_val_loss = checkpoint['best_val_loss']
     if 'best_perplexity' in checkpoint.keys(): 
         best_perplexity = checkpoint['best_perplexity']
     if 'best_accuracy' in checkpoint.keys():
-        best_accuracy = checkpoint['best_accuracy']
+        best_accuracy = checkpoint['best_accuracy'] if checkpoint['best_accuracy'] else -1
     if 'best_judgeacc' in checkpoint.keys():
-        best_judgeacc = checkpoint['best_judgeacc']
+        best_judgeacc = checkpoint['best_judgeacc'] if checkpoint['best_judgeacc'] else -1
+        
 elif init_from.startswith('gpt2'):
     print(f"Initializing from OpenAI GPT-2 weights: {init_from}")
     # initialize from OpenAI GPT-2 weights

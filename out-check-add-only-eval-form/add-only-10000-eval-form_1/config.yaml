@@ -7,7 +7,7 @@ bias: false
 block_size: 256
 ckpt_path_name: ckpt_10000.pt
 compile: true
-data_format: plain
+data_format: eval_format
 data_type: text
 dataset: bal
 decay_lr: true
@@ -19,7 +19,7 @@ eval_interval: 250
 eval_iters: 200
 eval_judge: false
 eval_only: false
-exp_name: add-only-10000
+exp_name: add-only-10000-eval-form
 grad_clip: 1.0
 gradient_accumulation_steps: 1
 init_from: scratch
@@ -36,8 +36,9 @@ n_embd: 384
 n_head: 6
 n_layer: 6
 operator: +
-out_dir: out-check-add-only
-result_dir: out-check-add-only/add-only-10000_1
+out_dir: out-check-add-only-eval-form
+result_dir: out-check-add-only-eval-form/add-only-10000-eval-form_1
+resume_from: null
 reverse_c: false
 start: FILE:data/bal/test_3digit_10000.txt
 tokenizer: char
@@ -46,6 +47,6 @@ val_data_path: val.bin
 vocabulary: all_ascii_chars
 wandb_log: true
 wandb_project: addition
-wandb_run_name: add-only-10000
+wandb_run_name: add-only-10000-eval-form
 warmup_iters: 100
 weight_decay: 0.1
