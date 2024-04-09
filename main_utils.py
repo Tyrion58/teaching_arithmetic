@@ -364,7 +364,7 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False, test=Fal
 
 # creating a script to take in a list of tuples [(x1, x2, y)] and output a string of the form "x1 x2 y\n"
 # this will be used to generate the data for our TF model
-def generate_data_str(data_list, operator='+', format='plain', train=True, shuffle=True, judge=False):
+def generate_data_str(data_list, operator='+', format='plain', train=True, shuffle=True, judge=False, label_exp=False):
     if shuffle:
         random.shuffle(data_list)
         
@@ -376,34 +376,34 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
             if train:
             # create training data (x1+x2=y)
                 if format == 'plain':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"{label}{x1}{operator}{x2}={y}?{label}\n"
                     else:
                         output_str = f"{x1}{operator}{x2}={y}\n"
                 elif format == 'reverse':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"{label}${x1}{operator}{x2}={str(y)[::-1]}?${label}\n"
                     else:
                         output_str = f"${x1}{operator}{x2}={str(y)[::-1]}$\n"
                 elif format == 'eval_format':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"{label}e({x1}{operator}{x2}):{y}{label}\n"
                     else:
                         output_str = f"e({x1}{operator}{x2}):{y}\n"
             else:
                 # create test data (x1+x2=)
                 if format == 'plain':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"T{x1}{operator}{x2}=\n"
                     else:
                         output_str = f"{x1}{operator}{x2}=\n"
                 elif format == 'reverse':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"T${x1}{operator}{x2}=\n"
                     else:
                         output_str = f"${x1}{operator}{x2}=\n"
                 elif format == 'eval_format':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"Te({x1}{operator}{x2}):\n"
                     else:
                         output_str = f"e({x1}{operator}{x2}):\n"

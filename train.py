@@ -93,6 +93,7 @@ start = None
 judge_start = None
 judge_mode = 'bilabel'
 judge = False
+label_exp = False # 在每个计算式前后加label，一般只在mix时设置为True
 reverse_c = False
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str, type(None)))]
@@ -152,8 +153,10 @@ elif data_type == 'text':
     train_data_list = get_data_list(train_data_path, operator=operator, judge=judge)
     val_data_list = get_data_list(filename=None, operator=operator, judge=judge) # get_data_list(val_data, operator='+')
 
-    train_data_str = generate_data_str(train_data_list, operator=operator, format=data_format, shuffle=True, train=True, judge=judge)
-    val_data_str = generate_data_str(val_data_list, operator=operator, format=data_format, shuffle=True, train=True, judge=judge)
+    train_data_str = generate_data_str(train_data_list, operator=operator, format=data_format, shuffle=True, 
+                                       train=True, judge=judge, label_exp=label_exp)
+    val_data_str = generate_data_str(val_data_list, operator=operator, format=data_format, shuffle=True, 
+                                     train=True, judge=judge, label_exp=label_exp)
 
     meta, meta_path, data_encoder, data_decoder = create_meta_file(vocabulary=vocabulary, 
                                                                input_data_str=train_data_str, tokenizer=tokenizer)
@@ -342,7 +345,8 @@ while True:
         if eval_addition:
             config['start'] = start
             print(start)
-            test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge=judge, reverse_c=reverse_c, verbose=True, data_format=data_format)
+            test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge=judge, \
+                reverse_c=reverse_c, verbose=True, data_format=data_format)
         
         if eval_judge:
             if not judge:

@@ -9,7 +9,7 @@ log_interval = 10 # don't print too too often
 # we expect to overfit on this small dataset, so only save when val improves
 always_save_checkpoint = False
 init_from = 'resume' # 'scratch' or 'resume' or 'gpt2*'
-resume_from = 'out-check-add-only-eval-form/ckpt_10000_acc.pt'
+resume_from = 'out/out-check-add-only-eval-form/ckpt_10000_acc.pt'
 
 wandb_log = True # override via command line if you like
 wandb_project = 'judge'
@@ -24,7 +24,7 @@ eval_judge = True
 judge_mode = 'judge_op' # 'bilabel' or 'judge_op'
 judge = True
 reverse_c = False
-data_format = 'plain' # 'plain' or 'reverse' or 'algo_reasoning'
+data_format = 'eval_format' # 'plain' or 'reverse' or 'algo_reasoning'
 
 data_type = 'text' # 'binary' by default, can be 'text'
 judge_start = "FILE:data/addition_judge/test_3digit_judge_10000.txt"

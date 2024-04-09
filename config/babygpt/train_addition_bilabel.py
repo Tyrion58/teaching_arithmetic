@@ -26,6 +26,7 @@ judge_start = "FILE:data/addition_judge/test_3digit_judge_10000.txt"
 start = "FILE:data/addition_judge/test_3digit_add_from_judge_10000.txt"
 train_data_path="train_3digit_add_from_judge_10000.txt"
 judge = True
+label_exp = True 
 # baby GPT model :)
 n_layer = 6
 n_head = 6

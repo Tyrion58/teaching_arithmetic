@@ -170,14 +170,19 @@ class model_tester:
                  data_format='plain',
                  reverse_c=False,
                  mode='bilabel',
-                 mydevice='mps'):
+                 mydevice='mps',
+                 model_state=None):
         # init from a model saved in a specific directory
         ckpt_path = model_path
         self.max_new_tokens = max_new_tokens
+        
         checkpoint = torch.load(ckpt_path, map_location=mydevice)
         gptconf = GPTConfig(**checkpoint['model_args'])
         self.model = GPT(gptconf)
-        state_dict = checkpoint['model']
+        if model_state is not None:
+            state_dict = model_state
+        else:
+            state_dict = checkpoint['model']
         unwanted_prefix = '_orig_mod.'
         for k,v in list(state_dict.items()):
             if k.startswith(unwanted_prefix):
@@ -218,7 +223,9 @@ class model_addition_tester:
                  data_format='plain',
                  reverse_c=False,
                  operator='+',
-                 mydevice='mps') -> None:
+                 mydevice='mps',
+                 model_state=None,
+                 judge=False) -> None:
         
         self.meta_path = meta_path
         self.test_file = 'FILE:' + test_file
@@ -226,6 +233,7 @@ class model_addition_tester:
         self.data_format = data_format
         self.reverse_c = reverse_c
         self.operator = operator
+        self.judge = judge
         self.device = mydevice
         
          # init from a model saved in a specific directory
@@ -233,7 +241,10 @@ class model_addition_tester:
         checkpoint = torch.load(ckpt_path, map_location=mydevice)
         gptconf = GPTConfig(**checkpoint['model_args'])
         self.model = GPT(gptconf)
-        state_dict = checkpoint['model']
+        if model_state is not None:
+            state_dict = model_state
+        else:
+            state_dict = checkpoint['model']
         unwanted_prefix = '_orig_mod.'
         for k,v in list(state_dict.items()):
             if k.startswith(unwanted_prefix):
@@ -249,5 +260,5 @@ class model_addition_tester:
             'device': self.device,
         }
         eval_addition_batch(config=config, model=self.model, ctx=ctx, encode=self.encode, 
-                            decode=self.decode, judge=False, reverse_c=self.reverse_c, num_digit=self.num_digit,
+                            decode=self.decode, judge=self.judge, reverse_c=self.reverse_c, num_digit=self.num_digit,
                             data_format=self.data_format, operator=self.operator)
