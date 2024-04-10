@@ -20,8 +20,13 @@ train_data_path = 'train.bin'
 val_data_path = 'val.bin'
 ckpt_path_name = 'ckpt.pt'
 eval_addition = True
-start = "FILE:data/addition_bal/prompt_addition_test_0.0001.txt"
+
+data_type = 'text' # 'binary' by default, can be 'text'
+judge_start = "FILE:data/addition_judge/test_3digit_judge_10000.txt"
+start = "FILE:data/addition_judge/test_3digit_add_from_judge_10000.txt"
+train_data_path="train_3digit_add_from_judge_10000.txt"
 judge = True
+label_exp = True 
 # baby GPT model :)
 n_layer = 6
 n_head = 6

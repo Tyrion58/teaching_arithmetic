@@ -7,6 +7,7 @@ import string
 import tiktoken
 import pickle
 import os
+import re
 
 
 def reverse_string(a: str) -> str:
@@ -48,19 +49,22 @@ def get_abc(expression: str):
         expression = expression.strip()
         
         if '+' in expression:
-            operation = '+'
+             operation = '+'
             
-        [a, b] = expression.split(operation)
-         # 对于有label数据
-        if a[0] == 'T' or a[0] == 'F':
-            # 如果开头有label，去除label
-            a = a[1:].strip()
+        numbers = re.findall(r'\d+', expression)
+        a = numbers[0]
+        b = numbers[1]
+        # [a, b] = expression.split(operation)
+        #  # 对于有label数据
+        # if a[0] == 'T' or a[0] == 'F':
+        #     # 如果开头有label，去除label
+        #     a = a[1:].strip()
             
-        if a[0] == '$':
-            a = a[1:].strip()
+        # if a[0] == '$':
+        #     a = a[1:].strip()
        
-        b = b.split('=')[0].strip()
-        a = a.strip()
+        # b = b.split('=')[0].strip()
+        # a = a.strip()
         if operation == '+':
             # 计算和
             c = int(a) + int(b)
@@ -132,8 +136,13 @@ def get_real_c_hat(fake_c_hat, line_start):
             c_hat = c_hat[:-1]
     else:
         return c_hat, Pred
+    
+    if 'e' == line_start:
+        c_hat2 = c_hat.split(':')[0].strip()
+        return c_hat, Pred
                             
     c_hat2 = c_hat.split('?')[0].strip()
+    c_hat2 = c_hat2.split(')')[0].strip()
     c_hat2 = c_hat2.split('\n')[0]
     
 
@@ -303,8 +312,8 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False, test=Fal
                         x1, x2, y2 = numbers
                         data_list.append((int(x1), int(x2), int(y2), label, 'judge'))
                         continue
-                    else:
-                        raise ValueError('Can not recognize this label!')
+                    # else:
+                    #    raise ValueError('Can not recognize this label!')
                     
                     
                 # if first char is $, assume it's a delimiter
@@ -355,7 +364,7 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False, test=Fal
 
 # creating a script to take in a list of tuples [(x1, x2, y)] and output a string of the form "x1 x2 y\n"
 # this will be used to generate the data for our TF model
-def generate_data_str(data_list, operator='+', format='plain', train=True, shuffle=True, judge=False):
+def generate_data_str(data_list, operator='+', format='plain', train=True, shuffle=True, judge=False, label_exp=False):
     if shuffle:
         random.shuffle(data_list)
         
@@ -367,27 +376,37 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
             if train:
             # create training data (x1+x2=y)
                 if format == 'plain':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"{label}{x1}{operator}{x2}={y}?{label}\n"
                     else:
                         output_str = f"{x1}{operator}{x2}={y}\n"
                 elif format == 'reverse':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"{label}${x1}{operator}{x2}={str(y)[::-1]}?${label}\n"
                     else:
                         output_str = f"${x1}{operator}{x2}={str(y)[::-1]}$\n"
+                elif format == 'eval_format':
+                    if judge and label_exp:
+                        output_str = f"{label}e({x1}{operator}{x2}):{y}{label}\n"
+                    else:
+                        output_str = f"e({x1}{operator}{x2}):{y}\n"
             else:
                 # create test data (x1+x2=)
                 if format == 'plain':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"T{x1}{operator}{x2}=\n"
                     else:
                         output_str = f"{x1}{operator}{x2}=\n"
                 elif format == 'reverse':
-                    if judge:
+                    if judge and label_exp:
                         output_str = f"T${x1}{operator}{x2}=\n"
                     else:
                         output_str = f"${x1}{operator}{x2}=\n"
+                elif format == 'eval_format':
+                    if judge and label_exp:
+                        output_str = f"Te({x1}{operator}{x2}):\n"
+                    else:
+                        output_str = f"e({x1}{operator}{x2}):\n"
             if idx == 0:
                 data_str = output_str
             else:
@@ -396,15 +415,15 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
         elif operator in ['judge'] and judge:
             x1, x2, y, label = data_tuple[0], data_tuple[1], data_tuple[2], data_tuple[3]
             if train:
-                if format == 'plain':
+                if format == 'plain' or format == 'eval_format':
                     output_str = f"j({x1}{operator}{x2}={y})~{label}\n"
                 elif format == 'reverse':
                     output_str = f"j({x1}{operator}{x2}={str(y)[::-1]})~{label}\n"
                 else:
-                    raise ValueError('Format must be plain or reverse!')
+                    raise ValueError('Format must be plain, reverse or eval_format!')
             else:
                 # test case
-                if format == 'plain':
+                if format == 'plain' or format == 'eval_format':
                     output_str = f"j({x1}{operator}{x2}={y})~\n"
                 elif format == 'reverse':
                     output_str = f"j({x1}{operator}{x2}={str(y)[::-1]})~\n"

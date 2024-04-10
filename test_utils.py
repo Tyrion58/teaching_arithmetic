@@ -5,11 +5,11 @@ from contextlib import nullcontext
 import re
 
 
-def eval_judge_batch(config, model, ctx, encode, decode, operator='+', data_format='plain', reverse_c=False, num_digit=3, max_new_tokens=1, mode='bilabel'):
+def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', reverse_c=False, num_digit=3, max_new_tokens=1, mode='bilabel'):
     model.eval()
-    start = config['start']
+    start = config['judge_start']
     device = config['device']
-    test_data_file = start[5:]
+    # test_data_file = start[5:]
     test_batch_size = config['test_batch_size'] if 'test_batch_size' in config.keys() else 128
     # 设置max_new_tokens为1，因为只需要输出判断结果
     max_new_tokens = max_new_tokens
@@ -55,13 +55,19 @@ def eval_judge_batch(config, model, ctx, encode, decode, operator='+', data_form
         #line_idx是所取出算式的index，取出对应行line
         line = lines[line_idx]
         line = line.strip('\n')
-        # if mode in ['bilabel']:
-        label = line[0]
-        line = line[1:]
-        # elif mode in ['judge_op']:
-        #    label = line[-1]
-        #    pattern = r"\((.*?)\)"
-        #    line = re.search(pattern, line).group(1)
+   
+        if line[0] == 'j':
+            label = line.split('~')[-1]
+            line = line.split('~')[0]
+            pattern = r"\d+"
+            numbers = re.findall(pattern, line)
+            numbers = [int(number) for number in numbers]
+            x1, x2, y2 = numbers
+            line = f'{x1}+{x2}={y2}?'
+        else:
+            label = line[0]
+            line = line[1:]
+    
         if data_format=='reverse':
             line = '$'+line+'$'
         # 对line这个string做编码
@@ -117,6 +123,9 @@ def eval_judge_batch(config, model, ctx, encode, decode, operator='+', data_form
                         elif Pred == 'F':
                             FN += 1
                             print('wrong outputs(x): ', outcome)
+                        else: 
+                            no_judge += 1
+                            print('no judging outputs(x): ', outcome)
                             
                     elif label == 'F':
                         if Pred == 'F':
@@ -126,7 +135,9 @@ def eval_judge_batch(config, model, ctx, encode, decode, operator='+', data_form
                         elif Pred == 'T':
                             FP += 1
                             print('wrong outputs(x): ', outcome)
-                            
+                        else:
+                            no_judge += 1
+                            print('no judging outputs(x): ', outcome)
                     else:
                         no_judge += 1
                         
@@ -159,14 +170,19 @@ class model_tester:
                  data_format='plain',
                  reverse_c=False,
                  mode='bilabel',
-                 mydevice='mps'):
+                 mydevice='mps',
+                 model_state=None):
         # init from a model saved in a specific directory
         ckpt_path = model_path
         self.max_new_tokens = max_new_tokens
+        
         checkpoint = torch.load(ckpt_path, map_location=mydevice)
         gptconf = GPTConfig(**checkpoint['model_args'])
         self.model = GPT(gptconf)
-        state_dict = checkpoint['model']
+        if model_state is not None:
+            state_dict = model_state
+        else:
+            state_dict = checkpoint['model']
         unwanted_prefix = '_orig_mod.'
         for k,v in list(state_dict.items()):
             if k.startswith(unwanted_prefix):
@@ -184,7 +200,7 @@ class model_tester:
     def test_extra(self):
         ctx = nullcontext()
         config={
-            'start': self.extra_path,
+            'judge_start': self.extra_path,
             'device': self.device,
         }
         eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
@@ -193,8 +209,56 @@ class model_tester:
     def test_add_noise(self):
         ctx = nullcontext()
         config={
-            'start': self.add_noise_path,
+            'judge_start': self.add_noise_path,
             'device': self.device,
         }
         eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
                          data_format=self.dataformat, reverse_c=self.rev_c, mode=self.mode)
+        
+class model_addition_tester:
+    def __init__(self, model_path, 
+                 meta_path='meta_all_ascii_chars.pkl',
+                 test_file='./bal/train_3digit_10000.txt',
+                 num_digit=3,
+                 data_format='plain',
+                 reverse_c=False,
+                 operator='+',
+                 mydevice='mps',
+                 model_state=None,
+                 judge=False) -> None:
+        
+        self.meta_path = meta_path
+        self.test_file = 'FILE:' + test_file
+        self.num_digit = num_digit
+        self.data_format = data_format
+        self.reverse_c = reverse_c
+        self.operator = operator
+        self.judge = judge
+        self.device = mydevice
+        
+         # init from a model saved in a specific directory
+        ckpt_path = model_path
+        checkpoint = torch.load(ckpt_path, map_location=mydevice)
+        gptconf = GPTConfig(**checkpoint['model_args'])
+        self.model = GPT(gptconf)
+        if model_state is not None:
+            state_dict = model_state
+        else:
+            state_dict = checkpoint['model']
+        unwanted_prefix = '_orig_mod.'
+        for k,v in list(state_dict.items()):
+            if k.startswith(unwanted_prefix):
+                state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+        self.model.load_state_dict(state_dict)
+        self.model.to(mydevice)
+        self.encode, self.decode = get_encode_decode(meta_path)
+        
+    def test_addition(self):
+        ctx = nullcontext()
+        config={
+            'start': self.test_file,
+            'device': self.device,
+        }
+        eval_addition_batch(config=config, model=self.model, ctx=ctx, encode=self.encode, 
+                            decode=self.decode, judge=self.judge, reverse_c=self.reverse_c, num_digit=self.num_digit,
+                            data_format=self.data_format, operator=self.operator)
