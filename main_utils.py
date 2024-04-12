@@ -149,7 +149,7 @@ def get_real_c_hat(fake_c_hat, line_start):
     return c_hat2, Pred
 
 
-def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse_c=False, num_digit=3, operator='+', data_format='plain', verbose=False):
+def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse_c=False, num_digit=3, operator='+', data_format='plain', verbose=False, label_exp=False):
     model.eval()
     start = config['start']
     device = config['device']
@@ -167,7 +167,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
         print(f"Evaluating Addition using test data file: {test_data_file}")
         # we know test examples are test.txt
         test_data_list = get_data_list(test_data_file, operator=operator, judge=judge, test=True)
-        test_data_str = generate_data_str(test_data_list, operator=operator, format=data_format, train=False, shuffle=True, judge=judge)
+        test_data_str = generate_data_str(test_data_list, operator=operator, format=data_format, train=False, shuffle=True, judge=judge, label_exp=label_exp)
       
         lines = test_data_str.split('\n')[:-1]
         for i, line in enumerate(lines):

@@ -1,11 +1,12 @@
 from main_utils import *
-from model import GPTConfig, GPT
+from model import GPTConfig, GPT, JudgeGPT
 import torch
 from contextlib import nullcontext
 import re
 
 
-def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', reverse_c=False, num_digit=3, max_new_tokens=1, mode='bilabel'):
+def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', reverse_c=False, num_digit=3, 
+                     max_new_tokens=1, mode='bilabel'):
     model.eval()
     start = config['judge_start']
     device = config['device']
@@ -171,14 +172,18 @@ class model_tester:
                  reverse_c=False,
                  mode='bilabel',
                  mydevice='mps',
-                 model_state=None):
+                 model_state=None,
+                 judge_gpt=False) -> None:
         # init from a model saved in a specific directory
         ckpt_path = model_path
         self.max_new_tokens = max_new_tokens
         
         checkpoint = torch.load(ckpt_path, map_location=mydevice)
         gptconf = GPTConfig(**checkpoint['model_args'])
-        self.model = GPT(gptconf)
+        if judge_gpt:
+            self.model = JudgeGPT(gptconf)
+        else:
+            self.model = GPT(gptconf)
         if model_state is not None:
             state_dict = model_state
         else:
@@ -225,7 +230,8 @@ class model_addition_tester:
                  operator='+',
                  mydevice='mps',
                  model_state=None,
-                 judge=False) -> None:
+                 judge=False, 
+                 label_exp=False) -> None:
         
         self.meta_path = meta_path
         self.test_file = 'FILE:' + test_file
@@ -234,6 +240,7 @@ class model_addition_tester:
         self.reverse_c = reverse_c
         self.operator = operator
         self.judge = judge
+        self.label_exp = label_exp
         self.device = mydevice
         
          # init from a model saved in a specific directory
@@ -261,4 +268,4 @@ class model_addition_tester:
         }
         eval_addition_batch(config=config, model=self.model, ctx=ctx, encode=self.encode, 
                             decode=self.decode, judge=self.judge, reverse_c=self.reverse_c, num_digit=self.num_digit,
-                            data_format=self.data_format, operator=self.operator)
+                            data_format=self.data_format, operator=self.operator, label_exp=self.label_exp)

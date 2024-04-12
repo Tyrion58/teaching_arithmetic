@@ -346,7 +346,7 @@ while True:
             config['start'] = start
             print(start)
             test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge=judge, \
-                reverse_c=reverse_c, verbose=True, data_format=data_format)
+                reverse_c=reverse_c, verbose=True, data_format=data_format, label_exp=label_exp)
         
         if eval_judge:
             if not judge:

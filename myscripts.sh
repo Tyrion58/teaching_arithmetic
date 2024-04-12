@@ -104,10 +104,6 @@ python train.py config/babygpt/train_addition_bal.py \
 python train.py config/babygpt/train_addition_from_judge.py \
     --gradient_accumulation_steps=1 
 
-# 增加GA尝试
-nohup python train.py config/babygpt/train_addition_from_judge.py --gradient_accumulation_steps=40 \
-    --wandb_run_name="add-only-10000GA40" --out_dir='out/out-check-add-onlyGA40' &
-
 # 从addition训练judge-only
 python train.py config/babygpt/train_judge_from_addition.py \
     --gradient_accumulation_steps=1 
@@ -151,3 +147,20 @@ python train.py config/babygpt/train_addition_from_judge.py \
     --train_data_path="train_3digit_add_from_judge_10000_1eval.txt" \
     --out_dir='out/out-addition-from-judge-1eval' \
     --judge=True
+
+# 从addition训练judge，但在训练judge时使用mix数据
+python train.py config/babygpt/train_judge_from_addition.py \
+    --gradient_accumulation_steps=1 --data_format='eval_format' \
+    --train_data_path="train_3digit_judge_10000_1eval.txt" \
+    --dataset='bal' --train_data_path="train_3digit_bilabel_V2_10000.txt" \
+    --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_V2_10000.txt' \
+    --out_dir='out/out-judge-from-addition-mix-data' \
+    --wandb_run_name="judge-from-addition-mix-finetune" --label_exp=True 
+
+# 从judge-only训练addition eval_format，但在训练add时使用mix数据
+python train.py config/babygpt/train_addition_from_judge.py \
+    --gradient_accumulation_steps=1 --data_format='eval_format' \
+    --dataset='bal' --train_data_path="train_3digit_bilabel_V2_10000.txt" \
+    --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_V2_10000.txt' \
+    --out_dir='out/out-add-from-judge-mix-data' \
+    --wandb_run_name="addition-from-judge-mix-finetune" --label_exp=True --judge=True
