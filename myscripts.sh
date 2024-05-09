@@ -164,3 +164,14 @@ python train.py config/babygpt/train_addition_from_judge.py \
     --eval_addition=True --start='FILE:data/bal/test_3digit_bilabel_V2_10000.txt' \
     --out_dir='out/out-add-from-judge-mix-data' \
     --wandb_run_name="addition-from-judge-mix-finetune" --label_exp=True --judge=True
+
+# 不预训练的基础上，使用addition+1%的judge做训练
+python train.py config/babygpt/train_addition_from_judge.py \
+    --gradient_accumulation_steps=1 --data_format='eval_format' \
+    --train_data_path="train_3digit_add_from_judge_10000_1eval.txt" \
+    --wandb_run_name="addition+judge1%-no-pretrain" \
+    --out_dir='out/addition+judge-1eval' \
+    --judge=True --init_from='scratch'
+
+# learn from mistake
+python train.py config/babygpt/train_addition_from_mistakes.py
