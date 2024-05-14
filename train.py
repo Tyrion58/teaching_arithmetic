@@ -31,6 +31,7 @@ from torch.distributed import init_process_group, destroy_process_group
 from model import GPTConfig, GPT
 from main_utils import *
 from test_utils import eval_judge_batch
+from instruction_utils import InstructionDataset
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -42,6 +43,7 @@ eval_iters = 200
 eval_only = False # if True, script exits right after the first eval
 always_save_checkpoint = True # if True, always save a checkpoint after each eval
 init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
+instruction = False
 resume_from = None
 # wandb logging
 wandb_log = False # disabled by default
@@ -167,7 +169,8 @@ elif data_type == 'text':
 else:
     raise ValueError('Unexpected data type!')
 
-def get_batch(split):
+def get_batch(split, instruction=False, A_token=None):
+    mask = None
     data = train_data if split == 'train' else val_data
     # 如果小于len(data)-block_size，输入将不能满足刚好是一个block_size的大小
     ix = torch.randint(len(data) - block_size, (batch_size,))
@@ -180,7 +183,11 @@ def get_batch(split):
         x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
     else:
         x, y = x.to(device), y.to(device)
-    return x, y
+    if instruction:
+        mask = (x == A_token)
+        mask = torch.roll(mask, shifts=1, dims=1)
+        mask[:, 0] = 0
+    return x, y, mask
 
 # init these up here, can override if init_from='resume' (i.e. from a checkpoint)
 iter_num = 0
@@ -278,6 +285,8 @@ if compile:
 # wrap model into DDP container
 if ddp:
     model = DDP(model, device_ids=[ddp_local_rank])
+A_token = data_encoder('~')[0]
+EOS_token = data_encoder('\n')[0]
 
 # helps estimate an arbitrarily accurate loss over either split using many batches
 @torch.no_grad()
@@ -287,9 +296,9 @@ def estimate_loss():
     for split in ['train', 'val']:
         losses = torch.zeros(eval_iters)
         for k in range(eval_iters):
-            X, Y = get_batch(split)
+            X, Y, mask = get_batch(split, instruction, A_token)
             with ctx:
-                logits, loss = model(X, Y)
+                logits, loss = model(X, Y, mask)
             losses[k] = loss.item()
         out[split] = losses.mean()
     model.train()
@@ -315,7 +324,8 @@ if wandb_log and master_process:
     wandb.init(project=wandb_project, name=wandb_run_name, config=config)
 
 # training loop
-X, Y = get_batch('train') # fetch the very first batch
+# fetch the very first batch
+X, Y, mask = get_batch('train', instruction, A_token)
 t0 = time.time()
 local_iter_num = 0 # number of iterations in the lifetime of this process
 raw_model = model.module if ddp else model # unwrap DDP container if needed
@@ -339,7 +349,7 @@ while True:
         param_group['lr'] = lr
 
     # evaluate the loss on train/val sets and write checkpoints
-    if iter_num % eval_interval == 0 and master_process:
+    if iter_num % eval_interval == 0 and master_process:      
         losses = estimate_loss()
         
         if eval_addition:
@@ -410,10 +420,10 @@ while True:
             # looking at the source of that context manager, it just toggles this variable
             model.require_backward_grad_sync = (micro_step == gradient_accumulation_steps - 1)
         with ctx:
-            logits, loss = model(X, Y)
+            logits, loss = model(X, Y, mask)
             loss = loss / gradient_accumulation_steps # scale the loss to account for gradient accumulation
         # immediately async prefetch next batch while model is doing the forward pass on the GPU
-        X, Y = get_batch('train')
+        X, Y, mask = get_batch('train', instruction, A_token)
         # backward pass, with gradient scaling if training in fp16
         scaler.scale(loss).backward()
     # clip the gradient

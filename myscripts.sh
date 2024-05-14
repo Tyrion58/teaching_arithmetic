@@ -175,3 +175,4 @@ python train.py config/babygpt/train_addition_from_judge.py \
 
 # learn from mistake
 python train.py config/babygpt/train_addition_from_mistakes.py
+python train.py config/babygpt/instruction_judge_from_mistakes.py
