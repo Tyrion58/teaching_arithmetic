@@ -27,7 +27,7 @@ eval_addition = True
 data_type = 'text' # 'binary' by default, can be 'text'
 # 判断测试集使用test_3digit_judge_10000.txt, 这是合理的，因为这是我们自己构造的错误数据集，不完全等同于model自己犯的错误
 judge_start = "FILE:data/addition_judge/test_3digit_judge_10000.txt"
-start = "FILE:data/addition_judge/test_3digit_add_from_judge_10000.txt"
+start = "FILE:data/bal2/test_3digit_2_10000.txt"
 train_data_path="answer_1st.txt"
 
 eval_addition = True

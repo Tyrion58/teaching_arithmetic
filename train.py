@@ -31,7 +31,6 @@ from torch.distributed import init_process_group, destroy_process_group
 from model import GPTConfig, GPT
 from main_utils import *
 from test_utils import eval_judge_batch
-from instruction_utils import InstructionDataset
 
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -194,6 +193,7 @@ iter_num = 0
 best_val_loss = 1e9
 best_accuracy = -1 # on addition data
 best_judgeacc = -1
+wrong_type_dict = None
 
 if meta_path_specified and data_type=='binary':
     # attempt to derive vocab_size from the dataset
@@ -355,7 +355,7 @@ while True:
         if eval_addition:
             config['start'] = start
             print(start)
-            test_accuracy, _ = eval_addition_batch(config, model, ctx, encode, decode, judge=judge, \
+            test_accuracy, _, wrong_type_dict = eval_addition_batch(config, model, ctx, encode, decode, judge=judge, \
                 reverse_c=reverse_c, verbose=True, data_format=data_format, label_exp=label_exp)
         
         if eval_judge:
@@ -375,6 +375,7 @@ while True:
                 "mfu": running_mfu*100, # convert to percentage
                 "test/accuracy": test_accuracy if eval_addition else None,
                 "test/judge_accuracy": pred_accuracy if eval_judge else None, 
+                'wrong_type_dict': wrong_type_dict if eval_addition else None
             })
         checkpoint = {
                 'model': raw_model.state_dict(),

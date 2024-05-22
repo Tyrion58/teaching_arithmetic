@@ -9,6 +9,20 @@ import pickle
 import os
 import re
 
+def update_wrong_type_dict(wrong_type_dict, c_hat, c):
+    # 如果c或c_hat不是整数，直接返回
+    if not isinstance(c_hat, int) or not isinstance(c, int):
+        return
+    c_hat = str(c_hat)
+    c = str(c)
+    if len(c_hat) != len(c):
+        wrong_type_dict['len_not_match'] += 1
+    else:
+        for i in range(len(c_hat)):
+            if c_hat[i] != c[i]:
+                wrong_type_dict[f'wrong_{i}'] += 1
+                
+
 
 def reverse_string(a: str) -> str:
     return a[::-1]
@@ -186,6 +200,8 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
     #注意区别，corrtec和total
     carry_dictionary.update({f'carry{i}_total':0 for i in range(num_digit+1)})
     prompt_dict = {}
+    wrong_type_dict = {f'wrong_{i}':0 for i in range(num_digit+1)}
+    wrong_type_dict['len_not_match'] = 0 
     
     for line_idx in tqdm(range(total)):
         #line_idx是所取出算式的index，取出对应行line
@@ -258,7 +274,7 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
                             print('outputs(x): ', outcome)
                             print(f'wrong  : {a}{op}{b}={c_hat2}')
                             print(f'correct: {a}{op}{b}={c}')
-                                
+                            update_wrong_type_dict(wrong_type_dict, c_hat2, c)
                             # if judge and (Pred == 'F'):
                             #    pred_correct+=1
                     else:
@@ -280,17 +296,34 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
     # if judge:
         # return pred_accuracy, accuracy, accuracy_dictionary
     
-    return accuracy, accuracy_dictionary
+    return accuracy, accuracy_dictionary, wrong_type_dict
 
 
 # adding functions to streamline data loading/generation
 # get data from .txt file -> outputs list of tuples (x1, x2, y, operator) or (x, y, operator)
 def get_data_list(filename=None, operator='+', delim=None, judge=False, test=False):
+    """Read txt file and return a list of tuples (x1, x2, y, operator), 
+    In training mode, the lines in file should be in the format 
+    of "x1+x2=y\\n" (Only Addtion data) --> (x1, x2, y, '+')
+    or "Tx1+x2=yT\\n" (Mixed training data: addition) --> (x1, x2, y, '+'), no difference with the first one
+    or "j(a+b=c)~T\\n" (Mixed training data: jugdmnet) --> (x1, x2, y, 'judge')
+    or "Tx1+x2=y?\\n" (Test judgment data) --> (x1, x2, y, '+')
+    Args:
+        filename (_type_, optional): _description_. Defaults to None.
+        operator (str, optional): _description_. Defaults to '+'.
+        delim (_type_, optional): _description_. Defaults to None.
+        judge (bool, optional): _description_. Defaults to False.
+        test (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        the data list of tuples
+    """
     import re
     data_list = []
     label = None
     if filename: # read data from file
         if operator in ['text']:
+            # 自然语言数据集
             with open(filename, 'r') as f:
                 data = f.read()
             data_splitted = data.split('\n\n')
@@ -301,11 +334,14 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False, test=Fal
                 lines = f.readlines()
             for line in lines:
                 if judge:
+                    # 该行为算式时，保存标签并删除标签
                     if line[0] in ['T', 'F']:
                         label = line[0]
                         line = line.split(label)[1].strip('?')
+                        # line: e(a+b):c\n
                     elif line.startswith('j'):
-                        label = line[-2]
+                        # 该行为判断式j(a+b=c)~T\n，标记为judge operator，提前结束
+                        label = line.strip().split('~')[-1]
                         pattern = r"\d+"
                         numbers = re.findall(pattern, line)
                         numbers = [int(number) for number in numbers]

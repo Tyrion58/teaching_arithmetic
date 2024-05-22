@@ -2,7 +2,7 @@ from main_utils import *
 from model import GPTConfig, GPT, JudgeGPT
 import torch
 from contextlib import nullcontext
-import re
+import re              
 
 
 def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', reverse_c=False, num_digit=3, 
@@ -51,6 +51,12 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
     #注意区别，corrtec和total
     carry_dictionary.update({f'carry{i}_total':0 for i in range(num_digit+1)})
     prompt_dict = {}
+    # 创建字典统计错误类型，包括：
+    # 1.字符串长度不符 2.第0位错误 3.第1位错误 4.第2位错误 5.第3位错误
+    wrong_type_dict = None
+    # wrong_type_dict = {f'wrong_{i}':0 for i in range(num_digit+1)}
+    # wrong_type_dict['len_not_match'] = 0 
+    
     
     for line_idx in tqdm(range(total)):
         #line_idx是所取出算式的index，取出对应行line
@@ -136,6 +142,7 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
                         elif Pred == 'T':
                             FP += 1
                             print('wrong outputs(x): ', outcome)
+                            # update_wrong_type_dict(wrong_type_dict, outcome)
                         else:
                             no_judge += 1
                             print('no judging outputs(x): ', outcome)

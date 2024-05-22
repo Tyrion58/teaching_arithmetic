@@ -23,7 +23,7 @@ eval_addition = False
 eval_judge = True
 judge = True
 train_data_path="train_3digit_judge_10000.txt"
-start = "FILE:data/addition_bilabel/prompt_3digit_10000.txt"
+start = None
 judge_start = "FILE:data/addition_judge/test_3digit_judge_10000.txt"
 judge_mode = 'judge_op'
 
