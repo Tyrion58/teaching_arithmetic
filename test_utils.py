@@ -1,11 +1,12 @@
 from main_utils import *
-from model import GPTConfig, GPT
+from model import GPTConfig, GPT, JudgeGPT
 import torch
 from contextlib import nullcontext
-import re
+import re              
 
 
-def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', reverse_c=False, num_digit=3, max_new_tokens=1, mode='bilabel'):
+def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', reverse_c=False, num_digit=3, 
+                     max_new_tokens=1, mode='bilabel', verbose=True):
     model.eval()
     start = config['judge_start']
     device = config['device']
@@ -50,6 +51,12 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
     #注意区别，corrtec和total
     carry_dictionary.update({f'carry{i}_total':0 for i in range(num_digit+1)})
     prompt_dict = {}
+    # 创建字典统计错误类型，包括：
+    # 1.字符串长度不符 2.第0位错误 3.第1位错误 4.第2位错误 5.第3位错误
+    wrong_type_dict = None
+    # wrong_type_dict = {f'wrong_{i}':0 for i in range(num_digit+1)}
+    # wrong_type_dict['len_not_match'] = 0 
+    
     
     for line_idx in tqdm(range(total)):
         #line_idx是所取出算式的index，取出对应行line
@@ -74,7 +81,7 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
         a,b,c,op = get_abc(line)
         if mode in ['judge_op']:
             line = line.split('?')[0]
-            line = f'j({line})~'
+            line = f'j{line}~'
         a_d, b_d, num_carry = get_num_digits(a), get_num_digits(b), numCarryOps(a,b)
         start_ids = encode(line)
         # 将编码转换为张量，并额外加一个维度，从len(start_ids)变为(1,len(start_ids))
@@ -122,10 +129,12 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
                             TP += 1
                         elif Pred == 'F':
                             FN += 1
-                            print('wrong outputs(x): ', outcome)
+                            if verbose:
+                                print('wrong outputs(x): ', outcome)
                         else: 
                             no_judge += 1
-                            print('no judging outputs(x): ', outcome)
+                            if verbose:
+                                print('no judging outputs(x): ', outcome)
                             
                     elif label == 'F':
                         if Pred == 'F':
@@ -134,10 +143,13 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
                             TN += 1
                         elif Pred == 'T':
                             FP += 1
-                            print('wrong outputs(x): ', outcome)
+                            if verbose:
+                                print('wrong outputs(x): ', outcome)
+                            # update_wrong_type_dict(wrong_type_dict, outcome)
                         else:
                             no_judge += 1
-                            print('no judging outputs(x): ', outcome)
+                            if verbose:
+                                print('no judging outputs(x): ', outcome)
                     else:
                         no_judge += 1
                         
@@ -148,14 +160,14 @@ def eval_judge_batch(config, model, ctx, encode, decode, data_format='plain', re
     
     accuracy_dictionary = {f'carry{i}': carry_dictionary[f'carry{i}_correct']/carry_dictionary[f'carry{i}_total']*100 \
         if carry_dictionary[f'carry{i}_total']!=0 else np.nan for i in range(num_digit+1)}
-    
-    print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
-    print(f"No judging probability of {total} examples: {no_judge}/{total} ({no_judging_probability}%)")
-    print(f'True Positive Examples: {TP}/{total}')
-    print(f'False Positive Examples: {FP}/{total}')
-    print(f'True Negative Examples: {TN}/{total}')
-    print(f'False Negative Examples: {FN}/{total}')
-    print(accuracy_dictionary)
+    if verbose:
+        print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
+        print(f"No judging probability of {total} examples: {no_judge}/{total} ({no_judging_probability}%)")
+        print(f'True Positive Examples: {TP}/{total}')
+        print(f'False Positive Examples: {FP}/{total}')
+        print(f'True Negative Examples: {TN}/{total}')
+        print(f'False Negative Examples: {FN}/{total}')
+        print(accuracy_dictionary)
     
     model.train()
     
@@ -166,19 +178,25 @@ class model_tester:
                  meta_path='meta_all_ascii_chars.pkl',
                  extra_test_file='./test_data/extra_num_judge_prompt.txt',
                  add_noise_test_file='./test_data/add_noise_judge_prompt.txt',
+                 together_test_file='./addition_jugde/test_3digit_jugde_W1_10000.txt',
                  max_new_tokens=1,
                  data_format='plain',
                  reverse_c=False,
                  mode='bilabel',
                  mydevice='mps',
-                 model_state=None):
+                 model_state=None,
+                 vebrose=False,
+                 judge_gpt=False) -> None:
         # init from a model saved in a specific directory
         ckpt_path = model_path
         self.max_new_tokens = max_new_tokens
         
         checkpoint = torch.load(ckpt_path, map_location=mydevice)
         gptconf = GPTConfig(**checkpoint['model_args'])
-        self.model = GPT(gptconf)
+        if judge_gpt:
+            self.model = JudgeGPT(gptconf)
+        else:
+            self.model = GPT(gptconf)
         if model_state is not None:
             state_dict = model_state
         else:
@@ -192,9 +210,11 @@ class model_tester:
         self.encode, self.decode = get_encode_decode(meta_path)
         self.extra_path = 'FILE:' + extra_test_file
         self.add_noise_path = 'FILE:' + add_noise_test_file
+        self.test_path = 'FILE:' + together_test_file
         self.device = mydevice
         self.dataformat = data_format
         self.rev_c = reverse_c
+        self.verbose = vebrose
         self.mode = mode
         
     def test_extra(self):
@@ -203,8 +223,10 @@ class model_tester:
             'judge_start': self.extra_path,
             'device': self.device,
         }
-        eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
-                         data_format=self.dataformat, reverse_c=self.rev_c, mode=self.mode)
+        pred_accuracy, no_judging_probability, accuracy_dictionary = eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
+                         data_format=self.dataformat, reverse_c=self.rev_c, mode=self.mode, verbose=self.verbose)
+        
+        return pred_accuracy, no_judging_probability, accuracy_dictionary
         
     def test_add_noise(self):
         ctx = nullcontext()
@@ -212,8 +234,21 @@ class model_tester:
             'judge_start': self.add_noise_path,
             'device': self.device,
         }
-        eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
-                         data_format=self.dataformat, reverse_c=self.rev_c, mode=self.mode)
+        pred_accuracy, no_judging_probability, accuracy_dictionary = eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens, 
+                         data_format=self.dataformat, reverse_c=self.rev_c, mode=self.mode, verbose=self.verbose)
+
+        return pred_accuracy, no_judging_probability, accuracy_dictionary
+        
+    def test_jugdment_together(self):
+        ctx = nullcontext()
+        config={
+            'judge_start': self.test_path,
+            'device': self.device,
+        }
+        pred_accuracy, no_judging_probability, accuracy_dictionary = eval_judge_batch(config, self.model, ctx, self.encode, self.decode, max_new_tokens=self.max_new_tokens,
+                            data_format=self.dataformat, reverse_c=self.rev_c, mode=self.mode, verbose=self.verbose)
+        
+        return pred_accuracy, no_judging_probability, accuracy_dictionary
         
 class model_addition_tester:
     def __init__(self, model_path, 
@@ -225,7 +260,9 @@ class model_addition_tester:
                  operator='+',
                  mydevice='mps',
                  model_state=None,
-                 judge=False) -> None:
+                 judge=False, 
+                 label_exp=False, 
+                 vebrose=True) -> None:
         
         self.meta_path = meta_path
         self.test_file = 'FILE:' + test_file
@@ -234,6 +271,8 @@ class model_addition_tester:
         self.reverse_c = reverse_c
         self.operator = operator
         self.judge = judge
+        self.label_exp = label_exp
+        self.verbose = vebrose
         self.device = mydevice
         
          # init from a model saved in a specific directory
@@ -259,6 +298,6 @@ class model_addition_tester:
             'start': self.test_file,
             'device': self.device,
         }
-        eval_addition_batch(config=config, model=self.model, ctx=ctx, encode=self.encode, 
+        return eval_addition_batch(config=config, model=self.model, ctx=ctx, encode=self.encode, 
                             decode=self.decode, judge=self.judge, reverse_c=self.reverse_c, num_digit=self.num_digit,
-                            data_format=self.data_format, operator=self.operator)
+                            data_format=self.data_format, operator=self.operator, label_exp=self.label_exp, verbose=self.verbose)

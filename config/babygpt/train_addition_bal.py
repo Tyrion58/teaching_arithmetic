@@ -13,14 +13,13 @@ wandb_log = True # override via command line if you like
 wandb_project = 'addition'
 wandb_run_name = 'addition-bal'
 
-dataset = 'addition_bal'
+dataset = 'bal'
 batch_size = 256
 block_size = 256 # context of up to 256 previous characters
-train_data_path = 'train.bin'
-val_data_path = 'val.bin'
+train_data_path = 'train_3digit_10000.txt'
 ckpt_path_name = 'ckpt.pt'
 eval_addition = True
-start = "FILE:data/addition_bal/prompt_addition_test_0.0001.txt"
+start = "FILE:data/bal/test_3digit_10000.txt"
 
 # baby GPT model :)
 n_layer = 6

@@ -9,6 +9,20 @@ import pickle
 import os
 import re
 
+def update_wrong_type_dict(wrong_type_dict, c_hat, c):
+    # 如果c或c_hat不是整数，直接返回
+    if not isinstance(c_hat, int) or not isinstance(c, int):
+        return
+    c_hat = str(c_hat)
+    c = str(c)
+    if len(c_hat) != len(c):
+        wrong_type_dict['len_not_match'] += 1
+    else:
+        for i in range(len(c_hat)):
+            if c_hat[i] != c[i]:
+                wrong_type_dict[f'wrong_{i}'] += 1
+                
+
 
 def reverse_string(a: str) -> str:
     return a[::-1]
@@ -44,6 +58,7 @@ def get_abc(expression: str):
     """
     return: a(str), b(str), c(int), operation(str)
     """
+    operation = None
     try:
         # 先去除首尾的空格与'\n'
         expression = expression.strip()
@@ -68,7 +83,8 @@ def get_abc(expression: str):
         if operation == '+':
             # 计算和
             c = int(a) + int(b)
-
+        else:
+            print(expression)
         # 返回结果
         return a, b, c, '+'
     except ValueError:
@@ -149,7 +165,7 @@ def get_real_c_hat(fake_c_hat, line_start):
     return c_hat2, Pred
 
 
-def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse_c=False, num_digit=3, operator='+', data_format='plain', verbose=False):
+def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse_c=False, num_digit=3, operator='+', data_format='plain', verbose=False, label_exp=False):
     model.eval()
     start = config['start']
     device = config['device']
@@ -167,13 +183,14 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
         print(f"Evaluating Addition using test data file: {test_data_file}")
         # we know test examples are test.txt
         test_data_list = get_data_list(test_data_file, operator=operator, judge=judge, test=True)
-        test_data_str = generate_data_str(test_data_list, operator=operator, format=data_format, train=False, shuffle=True, judge=judge)
+        test_data_str = generate_data_str(test_data_list, operator=operator, format=data_format, train=False, shuffle=True, judge=judge, label_exp=label_exp)
       
-        lines = test_data_str.split('\n')[:-1]
-        for i, line in enumerate(lines):
+        raw_lines = test_data_str.split('\n')[:-1]
+        lines = []
+        for i, line in enumerate(raw_lines):
             # 去除所有judge line
-            if line.startswith('j'):
-                lines.pop(i)
+            if not line.startswith('j'):
+                lines.append(line)
     else:
         raise NotImplementedError("This method is not implemented yet!")
     
@@ -186,6 +203,8 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
     #注意区别，corrtec和total
     carry_dictionary.update({f'carry{i}_total':0 for i in range(num_digit+1)})
     prompt_dict = {}
+    wrong_type_dict = {f'wrong_{i}':0 for i in range(num_digit+1)}
+    wrong_type_dict['len_not_match'] = 0 
     
     for line_idx in tqdm(range(total)):
         #line_idx是所取出算式的index，取出对应行line
@@ -255,10 +274,15 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
                             # if judge and (Pred == 'T'):
                             #    pred_correct+=1
                         else:
-                            print('outputs(x): ', outcome)
-                            print(f'wrong  : {a}{op}{b}={c_hat2}')
-                            print(f'correct: {a}{op}{b}={c}')
-                                
+                            if verbose:
+                                print('outputs(x): ', outcome)
+                                print(f'wrong  : {a}{op}{b}={c_hat2}')
+                                print(f'correct: {a}{op}{b}={c}')
+                            update_wrong_type_dict(wrong_type_dict, c_hat2, c)
+                            # print('outputs(x): ', outcome)
+                            # print(f'wrong  : {a}{op}{b}={c_hat2}')
+                            # print(f'correct: {a}{op}{b}={c}')
+                            # update_wrong_type_dict(wrong_type_dict, c_hat2, c)
                             # if judge and (Pred == 'F'):
                             #    pred_correct+=1
                     else:
@@ -269,28 +293,48 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
                     # metric_types = ['mse', 'normalized_mse', 'digit_wise_difference', 'incorrect_digit_count']
     # if judge:
     #    pred_accuracy = pred_correct/total*100
-    #    print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
+    #    print(f"Judgement accuracy of 
+    # {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
     accuracy = correct/total*100
-    print(f"accuracy of {total} examples: {correct}/{total} ({accuracy}%)")
+    if verbose:
+        print(f"accuracy of {total} examples: {correct}/{total} ({accuracy}%)")
     accuracy_dictionary = {f'carry{i}': carry_dictionary[f'carry{i}_correct']/carry_dictionary[f'carry{i}_total']*100 \
         if carry_dictionary[f'carry{i}_total']!=0 else np.nan for i in range(num_digit+1)}
-    print(accuracy_dictionary)
+    if verbose:
+        print(accuracy_dictionary)
     
     model.train()
     # if judge:
         # return pred_accuracy, accuracy, accuracy_dictionary
     
-    return accuracy, accuracy_dictionary
+    return accuracy, accuracy_dictionary, wrong_type_dict
 
 
 # adding functions to streamline data loading/generation
 # get data from .txt file -> outputs list of tuples (x1, x2, y, operator) or (x, y, operator)
 def get_data_list(filename=None, operator='+', delim=None, judge=False, test=False):
+    """Read txt file and return a list of tuples (x1, x2, y, operator), 
+    In training mode, the lines in file should be in the format 
+    of "x1+x2=y\\n" (Only Addtion data) --> (x1, x2, y, '+')
+    or "Tx1+x2=yT\\n" (Mixed training data: addition) --> (x1, x2, y, '+'), no difference with the first one
+    or "j(a+b=c)~T\\n" (Mixed training data: jugdmnet) --> (x1, x2, y, 'judge')
+    or "Tx1+x2=y?\\n" (Test judgment data) --> (x1, x2, y, '+')
+    Args:
+        filename (_type_, optional): _description_. Defaults to None.
+        operator (str, optional): _description_. Defaults to '+'.
+        delim (_type_, optional): _description_. Defaults to None.
+        judge (bool, optional): _description_. Defaults to False.
+        test (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        the data list of tuples
+    """
     import re
     data_list = []
     label = None
     if filename: # read data from file
         if operator in ['text']:
+            # 自然语言数据集
             with open(filename, 'r') as f:
                 data = f.read()
             data_splitted = data.split('\n\n')
@@ -301,11 +345,14 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False, test=Fal
                 lines = f.readlines()
             for line in lines:
                 if judge:
+                    # 该行 为算式时，保存标签并删除标签
                     if line[0] in ['T', 'F']:
                         label = line[0]
                         line = line.split(label)[1].strip('?')
+                        # line: e(a+b):c\n
                     elif line.startswith('j'):
-                        label = line[-2]
+                        # 该行为判断式ja+b=c~T\n，标记为judge operator，提前结束
+                        label = line.strip().split('~')[-1]
                         pattern = r"\d+"
                         numbers = re.findall(pattern, line)
                         numbers = [int(number) for number in numbers]
@@ -387,9 +434,10 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
                         output_str = f"${x1}{operator}{x2}={str(y)[::-1]}$\n"
                 elif format == 'eval_format':
                     if judge and label_exp:
-                        output_str = f"{label}e({x1}{operator}{x2}):{y}{label}\n"
+                        output_str = f"{label}e{x1}{operator}{x2}:{y}{label}\n"
                     else:
-                        output_str = f"e({x1}{operator}{x2}):{y}\n"
+                        output_str = f"e{x1}{operator}{x2}:{y}\n"
+                        # output_str = f"e({x1}{operator}{x2}):{y}\n"
             else:
                 # create test data (x1+x2=)
                 if format == 'plain':
@@ -404,9 +452,9 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
                         output_str = f"${x1}{operator}{x2}=\n"
                 elif format == 'eval_format':
                     if judge and label_exp:
-                        output_str = f"Te({x1}{operator}{x2}):\n"
+                        output_str = f"Te{x1}{operator}{x2}:\n"
                     else:
-                        output_str = f"e({x1}{operator}{x2}):\n"
+                        output_str = f"e{x1}{operator}{x2}:\n"
             if idx == 0:
                 data_str = output_str
             else:
@@ -416,17 +464,17 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
             x1, x2, y, label = data_tuple[0], data_tuple[1], data_tuple[2], data_tuple[3]
             if train:
                 if format == 'plain' or format == 'eval_format':
-                    output_str = f"j({x1}{operator}{x2}={y})~{label}\n"
+                    output_str = f"j{x1}+{x2}={y}~{label}\n"
                 elif format == 'reverse':
-                    output_str = f"j({x1}{operator}{x2}={str(y)[::-1]})~{label}\n"
+                    output_str = f"j{x1}+{x2}={str(y)[::-1]}~{label}\n"
                 else:
                     raise ValueError('Format must be plain, reverse or eval_format!')
             else:
                 # test case
                 if format == 'plain' or format == 'eval_format':
-                    output_str = f"j({x1}{operator}{x2}={y})~\n"
+                    output_str = f"j{x1}+{x2}={y}~\n"
                 elif format == 'reverse':
-                    output_str = f"j({x1}{operator}{x2}={str(y)[::-1]})~\n"
+                    output_str = f"j{x1}+{x2}={str(y)[::-1]}~\n"
                 else:
                     raise ValueError('Format must be plain or reverse!')
                     

@@ -19,7 +19,7 @@ dataset = 'addition_judge'
 batch_size = 256
 block_size = 256 # context of up to 256 previous characters
 
-eval_addition = False
+eval_addition = True
 eval_judge = True
 judge_mode = 'judge_op' # 'bilabel' or 'judge_op'
 judge = True
@@ -27,9 +27,9 @@ reverse_c = False
 data_format = 'eval_format' # 'plain' or 'reverse' or 'algo_reasoning'
 
 data_type = 'text' # 'binary' by default, can be 'text'
-judge_start = "FILE:data/addition_judge/test_3digit_judge_10000.txt"
-start = "FILE:data/addition_judge/test_3digit_add_from_judge_10000.txt"
-train_data_path="train_3digit_judge_10000.txt"
+judge_start = "FILE:data/addition_judge/test_3digit_judge_2_10000.txt"
+start = "FILE:data/bal2/test_3digit_2_10000.txt"
+train_data_path="train_3digit_judge_2_10000.txt"
 
 # baby GPT model :)
 n_layer = 6
