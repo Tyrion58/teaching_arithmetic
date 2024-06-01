@@ -13,6 +13,16 @@
             "justMyCode": true,
             "args": [
                 "config/babygpt/instruction_judge_from_mistakes.py",
+                "config/babygpt/train_addition_mixed.py",
+                "--wandb_project='Teach arithmetic",
+                "--wandb_run_name=\"mixed-2000-eval-L+W1\" ",
+                "--ckpt_path_name=\"ckpt_mixed_L+W1_2000.pt\"",
+                "--out_dir='test_out/out-check-mixed-eval-L+W1' ",
+                "--data_type='text'", "--data_format='eval_format'", "--label_exp=False ",
+                "--data_type='text'", "--data_format='eval_format'", "--label_exp=False" ,
+                "--dataset='mixed'", "--train_data_path=\"train_3digit_mixed_W1_2000.txt\"",
+                "--eval_addition=True", "--start=\"FILE:data/mixed/test_3digit_mixed_W1_10000.txt\"",
+                "--judge_start=\"FILE:data/mixed/test_3digit_mixed_W1_10000.txt\""
             ],
         }
     ]

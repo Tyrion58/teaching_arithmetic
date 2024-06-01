@@ -22,9 +22,9 @@ dataset = 'addition_judge'
 eval_addition = False
 eval_judge = True
 judge = True
-train_data_path="train_3digit_judge_10000.txt"
+train_data_path="train_3digit_judge_W1_10000.txt"
 start = None
-judge_start = "FILE:data/addition_judge/test_3digit_judge_10000.txt"
+judge_start = "FILE:data/addition_judge/test_3digit_judge_W1_10000.txt"
 judge_mode = 'judge_op'
 
 # baby GPT model :)

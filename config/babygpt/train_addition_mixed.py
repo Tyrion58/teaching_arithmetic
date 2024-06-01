@@ -30,7 +30,7 @@ judge_start = "FILE:data/addition_judge/test_3digit_judge_W1_10000.txt"
 start = "FILE:data/mixed/test_3digit_mixed_W1_10000.txt" # "FILE:data/mixed/test_3digit_mixed_W1_10000.txt" or "FILE:data/mixed/test_3digit_mixed_W2_10000.txt"
 train_data_path="train_3digit_mixed_W1_10000.txt" # "train_3digit_mixed_W1_10000.txt" or "train_3digit_mixed_W2_10000.txt"
 judge = True
-label_exp = True 
+label_exp = False
 # baby GPT model :)
 n_layer = 6
 n_head = 6

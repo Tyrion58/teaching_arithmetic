@@ -19,7 +19,7 @@ dataset = 'addition_judge'
 batch_size = 256
 block_size = 256 # context of up to 256 previous characters
 
-eval_addition = False
+eval_addition = True
 eval_judge = True
 judge_mode = 'judge_op' # 'bilabel' or 'judge_op'
 judge = True

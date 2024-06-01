@@ -58,6 +58,7 @@ def get_abc(expression: str):
     """
     return: a(str), b(str), c(int), operation(str)
     """
+    operation = None
     try:
         # 先去除首尾的空格与'\n'
         expression = expression.strip()
@@ -82,7 +83,8 @@ def get_abc(expression: str):
         if operation == '+':
             # 计算和
             c = int(a) + int(b)
-
+        else:
+            print(expression)
         # 返回结果
         return a, b, c, '+'
     except ValueError:
@@ -183,11 +185,12 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
         test_data_list = get_data_list(test_data_file, operator=operator, judge=judge, test=True)
         test_data_str = generate_data_str(test_data_list, operator=operator, format=data_format, train=False, shuffle=True, judge=judge, label_exp=label_exp)
       
-        lines = test_data_str.split('\n')[:-1]
-        for i, line in enumerate(lines):
+        raw_lines = test_data_str.split('\n')[:-1]
+        lines = []
+        for i, line in enumerate(raw_lines):
             # 去除所有judge line
-            if line.startswith('j'):
-                lines.pop(i)
+            if not line.startswith('j'):
+                lines.append(line)
     else:
         raise NotImplementedError("This method is not implemented yet!")
     
@@ -271,10 +274,15 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
                             # if judge and (Pred == 'T'):
                             #    pred_correct+=1
                         else:
-                            print('outputs(x): ', outcome)
-                            print(f'wrong  : {a}{op}{b}={c_hat2}')
-                            print(f'correct: {a}{op}{b}={c}')
+                            if verbose:
+                                print('outputs(x): ', outcome)
+                                print(f'wrong  : {a}{op}{b}={c_hat2}')
+                                print(f'correct: {a}{op}{b}={c}')
                             update_wrong_type_dict(wrong_type_dict, c_hat2, c)
+                            # print('outputs(x): ', outcome)
+                            # print(f'wrong  : {a}{op}{b}={c_hat2}')
+                            # print(f'correct: {a}{op}{b}={c}')
+                            # update_wrong_type_dict(wrong_type_dict, c_hat2, c)
                             # if judge and (Pred == 'F'):
                             #    pred_correct+=1
                     else:
@@ -285,12 +293,15 @@ def eval_addition_batch(config, model, ctx, encode, decode, judge=False, reverse
                     # metric_types = ['mse', 'normalized_mse', 'digit_wise_difference', 'incorrect_digit_count']
     # if judge:
     #    pred_accuracy = pred_correct/total*100
-    #    print(f"Judgement accuracy of {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
+    #    print(f"Judgement accuracy of 
+    # {total} examples: {pred_correct}/{total} ({pred_accuracy}%)")
     accuracy = correct/total*100
-    print(f"accuracy of {total} examples: {correct}/{total} ({accuracy}%)")
+    if verbose:
+        print(f"accuracy of {total} examples: {correct}/{total} ({accuracy}%)")
     accuracy_dictionary = {f'carry{i}': carry_dictionary[f'carry{i}_correct']/carry_dictionary[f'carry{i}_total']*100 \
         if carry_dictionary[f'carry{i}_total']!=0 else np.nan for i in range(num_digit+1)}
-    print(accuracy_dictionary)
+    if verbose:
+        print(accuracy_dictionary)
     
     model.train()
     # if judge:
@@ -334,13 +345,13 @@ def get_data_list(filename=None, operator='+', delim=None, judge=False, test=Fal
                 lines = f.readlines()
             for line in lines:
                 if judge:
-                    # 该行为算式时，保存标签并删除标签
+                    # 该行 为算式时，保存标签并删除标签
                     if line[0] in ['T', 'F']:
                         label = line[0]
                         line = line.split(label)[1].strip('?')
                         # line: e(a+b):c\n
                     elif line.startswith('j'):
-                        # 该行为判断式j(a+b=c)~T\n，标记为judge operator，提前结束
+                        # 该行为判断式ja+b=c~T\n，标记为judge operator，提前结束
                         label = line.strip().split('~')[-1]
                         pattern = r"\d+"
                         numbers = re.findall(pattern, line)
@@ -423,9 +434,10 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
                         output_str = f"${x1}{operator}{x2}={str(y)[::-1]}$\n"
                 elif format == 'eval_format':
                     if judge and label_exp:
-                        output_str = f"{label}e({x1}{operator}{x2}):{y}{label}\n"
+                        output_str = f"{label}e{x1}{operator}{x2}:{y}{label}\n"
                     else:
-                        output_str = f"e({x1}{operator}{x2}):{y}\n"
+                        output_str = f"e{x1}{operator}{x2}:{y}\n"
+                        # output_str = f"e({x1}{operator}{x2}):{y}\n"
             else:
                 # create test data (x1+x2=)
                 if format == 'plain':
@@ -440,9 +452,9 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
                         output_str = f"${x1}{operator}{x2}=\n"
                 elif format == 'eval_format':
                     if judge and label_exp:
-                        output_str = f"Te({x1}{operator}{x2}):\n"
+                        output_str = f"Te{x1}{operator}{x2}:\n"
                     else:
-                        output_str = f"e({x1}{operator}{x2}):\n"
+                        output_str = f"e{x1}{operator}{x2}:\n"
             if idx == 0:
                 data_str = output_str
             else:
@@ -452,17 +464,17 @@ def generate_data_str(data_list, operator='+', format='plain', train=True, shuff
             x1, x2, y, label = data_tuple[0], data_tuple[1], data_tuple[2], data_tuple[3]
             if train:
                 if format == 'plain' or format == 'eval_format':
-                    output_str = f"j({x1}{operator}{x2}={y})~{label}\n"
+                    output_str = f"j{x1}+{x2}={y}~{label}\n"
                 elif format == 'reverse':
-                    output_str = f"j({x1}{operator}{x2}={str(y)[::-1]})~{label}\n"
+                    output_str = f"j{x1}+{x2}={str(y)[::-1]}~{label}\n"
                 else:
                     raise ValueError('Format must be plain, reverse or eval_format!')
             else:
                 # test case
                 if format == 'plain' or format == 'eval_format':
-                    output_str = f"j({x1}{operator}{x2}={y})~\n"
+                    output_str = f"j{x1}+{x2}={y}~\n"
                 elif format == 'reverse':
-                    output_str = f"j({x1}{operator}{x2}={str(y)[::-1]})~\n"
+                    output_str = f"j{x1}+{x2}={str(y)[::-1]}~\n"
                 else:
                     raise ValueError('Format must be plain or reverse!')
                     
